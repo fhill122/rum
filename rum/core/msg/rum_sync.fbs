@@ -1,0 +1,37 @@
+namespace rum.msg;  // yeah it is not camel case, bite me
+
+enum SyncType : byte {
+    Add,
+    Remove,
+    Whole
+}
+
+table SubscriberInfo{
+    topic:string;
+    protocol:string;
+}
+
+table ServerInfo{
+    name:string;
+    protocol:string;
+}
+
+table NodeId{
+    nid:int32;
+    pid:int32;
+    // a single addr is insufficient to id a node in tcp mode, a new node may be launched with same address
+    tcp_addr:string;
+    ipc_addr:string;
+    // a human readable name, not used for id anything
+    name:string;
+}
+
+table SyncBroadcast{
+    node:NodeId;
+    version:uint64;
+    type:SyncType;
+    subscribers:[SubscriberInfo];
+    servers:[ServerInfo];
+}
+
+root_type SyncBroadcast;

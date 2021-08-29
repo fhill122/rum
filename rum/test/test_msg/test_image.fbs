@@ -1,0 +1,11 @@
+// yep. not camel. bite me
+namespace rum.test.msg;
+
+table Image{
+    w:uint32;
+    h:uint32;
+    format:string;
+    data:[byte];
+}
+
+root_type Image;

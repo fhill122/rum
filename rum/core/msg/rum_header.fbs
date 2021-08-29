@@ -1,0 +1,17 @@
+namespace rum.msg;  // yeah it is not camel case, bite me
+
+enum MsgType : byte{
+    Interrupt,
+    Message,
+    ServiceCall
+}
+
+table MsgHeader{
+    type:MsgType;
+    name:string;
+    protocal:string;
+    // topic:[byte];
+    // protocal:[byte];
+}
+
+root_type MsgHeader;
