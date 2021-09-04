@@ -8,7 +8,7 @@
 #include <rum/common/log.h>
 #include <rum/common/common.h>
 #include <rum/core/msg/rum_sync_generated.h>
-#include <rum/extern/MTimer.h>
+#include <rum/extern/ivtb/stopwatch.h>
 
 using namespace std;
 
@@ -36,17 +36,17 @@ void NodeBaseImpl::syncCb(zmq::message_t &msg) {
 
 void NodeBaseImpl::syncF(){
     // todo ivan. doing here. test this
-    MTimer timer;
+    ivtb::Stopwatch timer;
     unique_lock<mutex> lock(sync_mu_);
     auto last_sync_v = sync_version_;
     while (!is_down_.load(memory_order_acquire)){
-        double remain_t = kNodeHbPeriod-timer.passedMs_f();
+        double remain_t = kNodeHbPeriod-timer.passedMs();
         // if less than 10ms or sync version changed we quit waiting.
         // remain_t > heartbeat: system time change maybe
         while( remain_t > 10.0 && remain_t < kNodeHbPeriod &&
                 last_sync_v==sync_version_ && is_down_.load(memory_order_acquire)){
             hb_cv_.wait_for(lock, (remain_t)*1ms);
-            remain_t = kNodeHbPeriod-timer.passedMs_f();
+            remain_t = kNodeHbPeriod-timer.passedMs();
         }
 
         flatbuffers::FlatBufferBuilder builder;

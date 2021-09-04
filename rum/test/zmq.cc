@@ -201,9 +201,11 @@ TEST_F(MonitorTest, DisconnectOnRemoteCrash){
     }
     else{
         Log::I("parent", "start");
+        this_thread::sleep_for(100ms);
         socket_->connect(addr);
         this_thread::sleep_for(300ms);
         clearEvents();
+        Log::D("parent", "cleared old events");
 
         this_thread::sleep_for(500ms);
         string event_addr;
@@ -214,6 +216,10 @@ TEST_F(MonitorTest, DisconnectOnRemoteCrash){
         EXPECT_TRUE(res);
         EXPECT_EQ(event_addr, addr);
     }
+
+}
+
+TEST(MultiPartMsgTest, latency){
 
 }
 

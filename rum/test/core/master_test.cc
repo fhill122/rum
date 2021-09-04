@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <rum/core/internal/master.h>
 #include <rum/common/log.h>
-#include <rum/extern/MTimer.h>
+#include <rum/extern/ivtb/stopwatch.h>
 
 using namespace std;
 
@@ -20,18 +20,18 @@ TEST(MasterTest, QuickCompete){
     this_thread::sleep_for(10ms);
     ASSERT_TRUE(master1->active.load(memory_order_relaxed));
 
-    MTimer timer;
+    ivtb::Stopwatch timer;
     Log::I("QuickCompete", "create master 2");
     auto master2 = make_unique<rum::Master>(rum::shared_context());
     this_thread::sleep_for(10ms);
 
     Log::I("QuickCompete", "destroying master 1");
     master1.reset(nullptr);
-    MTimer timer2;
-    while(timer.passedMs_f() < 100 && !master2->active.load(memory_order_relaxed)){
+    ivtb::Stopwatch timer2;
+    while(timer.passedMs() < 100 && !master2->active.load(memory_order_relaxed)){
         this_thread::sleep_for(1ms);
     }
-    Log::I("QuickCompete", "rebind within %.1f ms", timer2.passedMs_f());
+    Log::I("QuickCompete", "rebind within %.1f ms", timer2.passedMs());
     ASSERT_TRUE(master2->active.load(memory_order_relaxed));
 
     Log::I("QuickCompete", "end");

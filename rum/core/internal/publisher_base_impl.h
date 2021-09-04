@@ -57,7 +57,7 @@ class PublisherBaseImpl {
 
     bool publishIpc(zmq::message_t &header, zmq::message_t &body);
     bool publishIpc(zmq::message_t &body);
-    bool publishIpc(zmq::message_t &&body){ publishIpc(body);}
+    bool publishIpc(zmq::message_t &&body){ return publishIpc(body);}
 
     bool scheduleItc(const std::shared_ptr<const void> &msg);
 

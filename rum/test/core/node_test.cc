@@ -3,7 +3,7 @@
 #include <rum/common/common.h>
 #include <rum/core/node_base.h>
 #include <rum/core/internal/node_base_impl.h>
-#include <rum/extern/MTimer.h>
+#include <rum/extern/ivtb/stopwatch.h>
 
 
 using namespace std;
@@ -29,19 +29,19 @@ TEST(NodeTest, ManyNodes){
     rum::log.setLogLevel(Log::Levels::i);
 
     int n=100;
-    MTimer timer;
+    ivtb::Stopwatch timer;
     vector<rum::NodeBaseImpl> nodes(n);
-    rum::printer.i(__func__, "create time %.1f ms", timer.passedMs_f());
+    rum::printer.i(__func__, "create time %.1f ms", timer.passedMs());
 
     timer.start();
     for (auto &node :nodes)
         node.connect({std::pair<string, string>(rum::GetMasterInAddr(), rum::GetMasterOutAddr())});
-    rum::printer.i(__func__, "connect time %.1f ms", timer.passedMs_f());
+    rum::printer.i(__func__, "connect time %.1f ms", timer.passedMs());
 
     timer.start();
     for (auto &node : nodes)
         node.shutdown();
-    rum::printer.i(__func__, "shutdown time %.1f ms", timer.passedMs_f());
+    rum::printer.i(__func__, "shutdown time %.1f ms", timer.passedMs());
 }
 
 int main(int argc, char **argv){
