@@ -64,7 +64,7 @@ std::string GetMasterInAddr() {
         printer.i("rum", "master inbound port from $%s: %s", kMasterPortInEnv, env_master_port);
         master_port = env_master_port;
     } else {
-        master_port = str_(rum::kDefMasterInPort);
+        master_port = to_string(rum::kDefMasterInPort);
     }
 
     return "tcp://" + rum::ip + ":" + master_port;
@@ -76,7 +76,7 @@ std::string GetMasterOutAddr() {
         printer.i("rum", "master outbound port from $%s: %s", kMasterPortOutEnv, env_master_port);
         master_port = env_master_port;
     } else {
-        master_port = str_(rum::kDefMasterOutPort);
+        master_port = to_string(rum::kDefMasterOutPort);
     }
 
     return "tcp://" + rum::ip + ":" + master_port;

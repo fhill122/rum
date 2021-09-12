@@ -7,6 +7,7 @@
 
 
 using namespace std;
+using namespace rum;
 
 // TEST(NodeTest, Basic){
 //     rum::NodeBaseImpl node;
@@ -26,7 +27,7 @@ using namespace std;
 
 
 TEST(NodeTest, ManyNodes){
-    rum::log.setLogLevel(Log::Levels::i);
+    rum::log.setLogLevel(Log::Destination::Std, Log::Level::i);
 
     int n=100;
     ivtb::Stopwatch timer;
@@ -45,7 +46,7 @@ TEST(NodeTest, ManyNodes){
 }
 
 int main(int argc, char **argv){
-    rum::log.setLogLevel(Log::Levels::v);
+    rum::log.setLogLevel(Log::Destination::Std, Log::Level::v);
 
     ::testing::InitGoogleTest(&argc, argv);
     int res =  RUN_ALL_TESTS();

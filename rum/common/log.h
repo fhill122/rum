@@ -5,11 +5,15 @@
 #ifndef RUM_COMMON_LOG_H_
 #define RUM_COMMON_LOG_H_
 
-#include <rum/extern/Log_cpp14.h>
+#include <rum/extern/ivtb/log.h>
 
 namespace rum{
+
+using Log = ivtb::Log;
+
 extern Log log;
 extern Log printer;
+
 }
 
 

@@ -2,9 +2,10 @@
 // Created by Ivan B on 2021/3/30.
 //
 
-#include <rum/extern/Log_cpp14.h>
+#include <rum/extern/ivtb/log.h>
 
 using namespace std;
+using namespace ivtb;
 
 class Obj{
 

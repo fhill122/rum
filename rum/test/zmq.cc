@@ -24,6 +24,7 @@
 #include <rum/common/zmq_helper.h>
 
 using namespace std;
+using namespace rum;
 
 class MonitorTest : public testing::Test{
   public:
@@ -224,7 +225,7 @@ TEST(MultiPartMsgTest, latency){
 }
 
 int main(int argc, char **argv){
-    rum::log.setLogLevel(Log::Levels::v);
+    rum::log.setLogLevel(Log::Destination::Std, Log::Level::v);
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

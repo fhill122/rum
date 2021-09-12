@@ -7,6 +7,7 @@
 namespace rum{
 
 Log log{};
-Log printer{Log::Levels::v, Log::Levels::s};
+Log printer{Log::Level::v, Log::Level::s};
+
 
 }

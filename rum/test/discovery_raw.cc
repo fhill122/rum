@@ -78,7 +78,7 @@ TEST(DicoveryTest, Discovery){
 }
 
 int main(int argc, char **argv){
-    rum::log.setLogLevel(Log::Levels::v);
+    rum::log.setLogLevel(Log::Destination::Std, Log::Level::v);
 
     ::testing::InitGoogleTest(&argc, argv);
     int result = RUN_ALL_TESTS();

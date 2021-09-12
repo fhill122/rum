@@ -4,6 +4,7 @@
 #include <rum/extern/ivtb/stopwatch.h>
 
 using namespace std;
+using namespace rum;
 
 // todo ivan. there is no guarantee it will be success every time. most of the time,
 //  the failure reason is that system still holding the underlying socket,
@@ -38,7 +39,7 @@ TEST(MasterTest, QuickCompete){
 }
 
 int main(int argc, char **argv){
-    rum::log.setLogLevel(Log::Levels::v);
+    rum::log.setLogLevel(Log::Destination::Std, Log::Level::v);
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
