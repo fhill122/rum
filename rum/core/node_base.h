@@ -5,7 +5,7 @@
 #ifndef RUM_CORE_NODE_BASE_H_
 #define RUM_CORE_NODE_BASE_H_
 
-#include <rum/extern/ThreadPool.h>
+#include <rum/extern/ivtb/thread_pool.h>
 
 #include <utility>
 #include "subscriber_base.h"
@@ -34,7 +34,7 @@ class NodeBase {
     //     const std::function<void(std::shared_ptr<void>&)> &itc_cb);
 
     std::unique_ptr<SubscriberBase> createSubscriber(std::string topic,
-        const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
+        const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
         const std::function<void(zmq::message_t&)> &ipc_cb,
         const std::function<void(const void *)> &itc_cb, std::string protocol = "");
 

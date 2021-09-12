@@ -8,7 +8,7 @@
 
 #include <unordered_map>
 
-#include <rum/extern/ThreadPool.h>
+#include <rum/extern/ivtb/thread_pool.h>
 
 namespace rum {
 
@@ -22,7 +22,7 @@ class MsgDispatcher {
         void add();
     };
 
-    ThreadPool tp_;
+    ivtb::ThreadPool tp_;
     // for controlling queue size_ only
     std::unordered_map<std::string, MsgQueue> task_queues;  // <topic/srv , msg>
 

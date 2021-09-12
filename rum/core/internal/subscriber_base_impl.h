@@ -6,7 +6,7 @@
 #define RUM_CORE_INTERNAL_SUBSCRIBER_BASE_IMPL_H_
 
 #include <rum/common/def.h>
-#include <rum/extern/ThreadPool.h>
+#include <rum/extern/ivtb/thread_pool.h>
 #include <rum/extern/zmq/zmq.hpp>
 
 namespace rum {
@@ -21,7 +21,7 @@ class SubscriberBaseImpl {
     };
 
   private:
-    std::shared_ptr<ThreadPool> tp_;
+    std::shared_ptr<ivtb::ThreadPool> tp_;
     // todo ivan. consider a lock free queue: https://github.com/cameron314/concurrentqueue
     // std::queue<std::shared_ptr<zmq::message_t>> msg_q_;
     std::queue<Msg> msg_q_; RUM_LOCK_BY(queue_mu_)
@@ -48,7 +48,7 @@ class SubscriberBaseImpl {
      * @param ipc_cb Ipc callback function, note that we allow to modify the message here
      * @param itc_cb Itc callback function
      */
-    SubscriberBaseImpl(std::string topic, const std::shared_ptr<ThreadPool> &tp,
+    SubscriberBaseImpl(std::string topic, const std::shared_ptr<ivtb::ThreadPool> &tp,
                        size_t queue_size, std::function<void(zmq::message_t&)> ipc_cb,
                        std::function<void(const void *)> itc_cb, std::string protocol = "");
 

@@ -23,7 +23,7 @@ unique_ptr<Master> Master::master_ = CreateGlobalMaster();
 Master::Master(std::shared_ptr<zmq::context_t> context) :
         context_(std::move(context)) {
     sub_container_ = make_unique<SubContainer>(context_);
-    auto sync_tp = std::make_shared<ThreadPool>(1);
+    auto sync_tp = std::make_shared<ivtb::ThreadPool>(1);
     sub_ = make_unique<SubscriberBaseImpl>(kSyncTopic, move(sync_tp), 0,
            [this](zmq::message_t& msg){syncForward(msg);}, nullptr);
     sub_container_->addSub(sub_.get());
@@ -32,7 +32,7 @@ Master::Master(std::shared_ptr<zmq::context_t> context) :
 
     // start binding thread. This is a must as monitoring may fail
     bind_t_ = make_unique<thread>([this]{
-        tu::NameThread("RumMasterBind");
+        ivtb::NameThread("RumMasterBind");
         unique_lock<mutex> lock(bind_mu_);
         while(to_bind_){
             // bind inbound addr if not before

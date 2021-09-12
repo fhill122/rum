@@ -17,7 +17,7 @@ namespace rum{
 #define TAG topic_+"_sub"
 
 SubscriberBaseImpl::SubscriberBaseImpl(std::string topic,
-        const std::shared_ptr<ThreadPool> &tp, const size_t queue_size,
+        const std::shared_ptr<ivtb::ThreadPool> &tp, const size_t queue_size,
         function<void(zmq::message_t&)> ipc_cb, function<void(const void *)> itc_cb,
         std::string protocol)
         : topic_(move(topic)), protocol_(move(protocol)), tp_(tp), queue_size_(queue_size),

@@ -26,7 +26,7 @@ NodeBaseImpl::NodeBaseImpl(string name, string domain, string addr):
     sub_container_ = make_unique<SubContainer>(context_, true);
     syncsub_container_ = make_unique<SubContainer>(context_, false);
     sync_pub_ = make_unique<PublisherBaseImpl>(kSyncTopic, "", context_, false);
-    sync_sub_ = make_unique<SubscriberBaseImpl>(kSyncTopic, make_shared<ThreadPool>(1), 1000,
+    sync_sub_ = make_unique<SubscriberBaseImpl>(kSyncTopic, make_shared<ivtb::ThreadPool>(1), 1000,
             [this](zmq::message_t& msg){ syncCb(msg);}, nullptr);
     syncsub_container_->addSub(sync_sub_.get());
 }

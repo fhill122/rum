@@ -16,7 +16,7 @@
 
 #include <rum/common/common.h>
 #include <rum/common/log.h>
-#include <rum/extern/ThreadUtil.h>
+#include <rum/extern/ivtb/thread_util.h>
 
 using namespace std;
 
@@ -239,7 +239,7 @@ void ZmqMonitor::start(CallbackFunc f_ptr) {
     AssertLog(!monitor_t_, "already started");
     to_monitor_.store(true, memory_order_release);
     monitor_t_ = make_unique<thread>([&, f_ptr] () mutable {
-        tu::NameThread("ZmqMonitor");
+        ivtb::NameThread("ZmqMonitor");
         while(to_monitor_.load(memory_order_acquire)){
             monitorOnce(&f_ptr, 0);
         }

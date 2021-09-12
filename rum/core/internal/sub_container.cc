@@ -70,7 +70,7 @@ bool SubContainer::start() {
 
     // start loop
     loop_t_ = make_unique<thread>([this]{
-        tu::NameThread("SubContainer");
+        ivtb::NameThread("SubContainer");
         log.v(TAG, "loop start");
         while(loop()){}
         log.v(TAG, "loop end");

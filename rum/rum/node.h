@@ -26,7 +26,7 @@ class Node : public NodeBase{
     template <class MsgT, class SubSerializerT = SerializerT>
     std::unique_ptr<Subscriber<SubSerializerT, MsgT>> createSubscriber(
             std::string topic, std::function<void(const MsgT&)> callback_f, size_t queue_size = 100,
-            const std::shared_ptr<ThreadPool> &tp = std::make_shared<ThreadPool>(1) );
+            const std::shared_ptr<ivtb::ThreadPool> &tp = std::make_shared<ivtb::ThreadPool>(1) );
 
     template <class MsgT, class PubSerializerT = SerializerT>
     std::unique_ptr<Publisher<PubSerializerT, MsgT>> createPublisher(std::string topic);
@@ -45,7 +45,7 @@ template<class SerializerT>
 template<class MsgT, class SubSerializerT>
 std::unique_ptr<Subscriber<SubSerializerT, MsgT>> Node<SerializerT>::createSubscriber(
         std::string topic, std::function<void(const MsgT&)> callback_f, size_t queue_size,
-        const std::shared_ptr<ThreadPool> &tp) {
+        const std::shared_ptr<ivtb::ThreadPool> &tp) {
 
     return std::make_unique<Subscriber<SubSerializerT, MsgT>>(
         std::move( *NodeBase::createSubscriber(std::move(topic), tp, queue_size,

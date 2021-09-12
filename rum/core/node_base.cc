@@ -25,7 +25,7 @@ NodeBase::~NodeBase() =  default;
 // }
 
 unique_ptr<SubscriberBase> NodeBase::createSubscriber(string topic,
-           const shared_ptr<ThreadPool> &tp, size_t queue_size,
+           const shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
            const function<void(zmq::message_t &)> &ipc_cb,
            const function<void(const void *)> &itc_cb,
            std::string protocol) {

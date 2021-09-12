@@ -18,7 +18,7 @@ struct SimpleNode{
     unique_ptr<SubContainer> sub_container;
     unique_ptr<PublisherBaseImpl> sync_pub;
     unique_ptr<SubscriberBaseImpl> sync_sub;
-    shared_ptr<ThreadPool> tp = make_shared<ThreadPool>(1);
+    shared_ptr<ivtb::ThreadPool> tp = make_shared<ivtb::ThreadPool>(1);
     atomic<int> sync_count{0};
 
     explicit SimpleNode(const shared_ptr<zmq::context_t>& context){
