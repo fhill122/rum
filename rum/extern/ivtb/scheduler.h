@@ -5,6 +5,10 @@
 //    - frontend / threadpool execution
 //    - monotonic clock
 //
+// Note: this implementation does not aim to provide high time precision.
+//
+// todo ivan.
+//    - support repeat n times
 // Created by Ivan B on 2021/8/27.
 //
 
@@ -14,18 +18,12 @@
 #include <string>
 #include <thread>
 #include <chrono>
-#include <utility>
-#include <set>
 #include <queue>
+#include <unordered_set>
 
 #include "thread_pool.h"
 
 namespace ivtb{
-
-// std::string timeToStr(std::chrono::steady_clock::time_point &t){
-//     using namespace std;
-//     // time_t t_t = chrono::steady_clock::to_time_t()
-// }
 
 double DurationToSeconds(const std::chrono::steady_clock::duration &dur){
     using namespace std::chrono;
@@ -35,11 +33,11 @@ double DurationToSeconds(const std::chrono::steady_clock::duration &dur){
 class Scheduler{
   public:
     struct Task{
-        std::string name;  // not used for now
-        bool repeat = false;
-        double period = 0;  // seconds
-        double delay = 0; // seconds
-        std::function<void()> action;
+        const std::string name;  // not used for now
+        const bool repeat = false;
+        const double period = 0;  // seconds
+        const double delay = 0; // seconds
+        const std::function<void()> action;
 
         // create a one shot task
         template<class F>
@@ -50,6 +48,10 @@ class Scheduler{
         template<class F>
         Task(F&& f, double period, double delay, std::string name = "") :
                 action(f), period(period), repeat(true), delay(delay), name(std::move(name)){}
+
+      private:
+        friend Scheduler;
+        bool cancelled = false;
     };
 
     struct Param{
@@ -58,6 +60,8 @@ class Scheduler{
 
   private:
     struct ScheduledTask{
+        unsigned long id = 0;
+
         std::shared_ptr<Task> task;
         // double last_run_t = 0;
         std::chrono::steady_clock::time_point next_run_t = std::chrono::steady_clock::time_point::min();
@@ -65,11 +69,17 @@ class Scheduler{
 
         ScheduledTask() = default;
 
-        explicit ScheduledTask(std::unique_ptr<Task> task) : task(std::move(task)) {
+        explicit ScheduledTask(std::shared_ptr<Task> task) : task(std::move(task)), id(genId()) {
             using namespace std::chrono;
             next_run_t = steady_clock::now() +
                     duration_cast<steady_clock::duration>(duration<double>{this->task->delay});
         }
+
+        ScheduledTask& operator=(const ScheduledTask&) = delete;
+        ScheduledTask(const ScheduledTask&) = delete;
+        ScheduledTask& operator=(ScheduledTask&&) = default;
+        ScheduledTask(ScheduledTask&&) = default;
+        ~ScheduledTask() = default;
 
         bool operator<( const ScheduledTask& rhs ) const {
             return next_run_t < rhs.next_run_t;
@@ -78,12 +88,18 @@ class Scheduler{
         bool operator>( const ScheduledTask& rhs ) const {
             return next_run_t > rhs.next_run_t;
         }
+
+        static unsigned long genId(){
+            static std::atomic<unsigned long> id_pool{1};
+            return id_pool.fetch_add(1, std::__1::memory_order_relaxed);
+        }
     };
 
   private:
     Param param;
-    // std::set<ScheduledTask> tasks_;
-    std::priority_queue<ScheduledTask, std::vector<ScheduledTask>, std::greater<ScheduledTask>> tasks_;
+    std::priority_queue<ScheduledTask, std::vector<ScheduledTask>, std::greater<ScheduledTask>> task_q_;
+    // all scheduled future tasks that will be executed
+    std::unordered_set<std::shared_ptr<Task>> tasks_;
     std::mutex tasks_mu_;
     std::unique_ptr<std::thread> schedule_t_;
     std::unique_ptr<ThreadPool> task_tp_;
@@ -94,8 +110,7 @@ class Scheduler{
   private:
     inline void loop();
 
-    // task will be moved in this function
-    inline void schedule(ScheduledTask &&task);
+    inline void internalSchedule(ScheduledTask &&task);
 
     inline void executeTask(ScheduledTask &&task);
 
@@ -103,8 +118,30 @@ class Scheduler{
     inline explicit Scheduler(int task_threads = 0);
     inline ~Scheduler();
 
-    inline void schedule(std::unique_ptr<Task> task);
+    /**
+     * Schedule a task
+     * @param task Task to be scheduled
+     */
+    inline void schedule(std::shared_ptr<Task> task);
+
+    /**
+     * Schedule a task.
+     * Note: this version of schedule does not support task cancelling
+     * @param task
+     */
     inline void schedule(Task &&task);
+
+    /**
+     * Cancel a task if it is possible
+     * @param task Task to be cancelled
+     * @return true if cancelled, false if already executed or cancelled before
+     */
+    inline bool cancel(const std::shared_ptr<Task> &task);
+
+    /**
+     * Manually stop the scheduler, after which remained tasks will never be executed.
+     * Note: Destructor do this automatically.
+     */
     inline void stop();
 };
 
@@ -119,48 +156,66 @@ Scheduler::~Scheduler() {
     stop();
 }
 
-void Scheduler::schedule(ScheduledTask &&task) {
+void Scheduler::internalSchedule(ScheduledTask &&task) {
+    auto addTask = [this](ScheduledTask &&task){
+        tasks_.emplace(task.task);
+        task_q_.push(std::move(task));
+    };
+
     bool need_notify = false;
     {
         std::lock_guard<std::mutex> lock(tasks_mu_);
         if (stop_) return;
-        if (tasks_.empty()){
+        if (task_q_.empty()){
             need_notify = true;
-            tasks_.push(std::move(task));
+            addTask(std::move(task));
         }
         else{
-            auto next_run = tasks_.top().next_run_t;
-            tasks_.push(std::move(task));
-            if (tasks_.top().next_run_t < next_run)
+            auto next_run = task_q_.top().next_run_t;
+            addTask(std::move(task));
+            if (task_q_.top().next_run_t < next_run)
                 need_notify = true;
         }
-
-        // todo ivan. delete
-        // auto t = tasks_.top().next_run_t - std::chrono::steady_clock::now();
-        // printf("scheduled a task after %f s, need to notify: %d\n",
-        //        DurationToSeconds(t), need_notify);
     }
     if (need_notify) cv_.notify_one();
 }
 
-void Scheduler::schedule(std::unique_ptr<Task> task) {
+void Scheduler::schedule(std::shared_ptr<Task> task) {
     ScheduledTask scheduled_task{std::move(task)};
-    schedule(std::move(scheduled_task));
+    internalSchedule(std::move(scheduled_task));
 }
 
 void Scheduler::schedule(Task &&task){
     ScheduledTask scheduled_task{std::make_unique<Task>(std::move(task))};
-    schedule(std::move(scheduled_task));
+    internalSchedule(std::move(scheduled_task));
+}
+
+bool Scheduler::cancel(const std::shared_ptr<Task> &task){
+    std::lock_guard<std::mutex> lock(tasks_mu_);
+    auto itr = tasks_.find(task);
+    if (itr == tasks_.end()){
+        return false;
+    }
+
+    task->cancelled = true;
+    tasks_.erase(itr);
+    return true;
 }
 
 void Scheduler::executeTask(ScheduledTask &&task) {
     using namespace std::chrono;
+    {
+        std::lock_guard<std::mutex> lock(tasks_mu_);
+        if (!task.task->repeat) tasks_.erase(task.task);
+        if (task.task->cancelled) return;
+    }
+
     task.last_run_t = steady_clock::now();
     task.task->action();
     if (task.task->repeat){
         task.next_run_t = task.last_run_t +
                 duration_cast<steady_clock::duration>(duration<double>{task.task->period});
-        schedule(std::move(task));
+        internalSchedule(std::move(task));
     }
 }
 
@@ -168,8 +223,8 @@ void Scheduler::loop() {
     using namespace std::chrono;
 
     auto timeForTask = [this]{
-        if(tasks_.empty()) return false;
-        return steady_clock::now() + duration<double>(param.tolerance) >= tasks_.top().next_run_t;
+        if(task_q_.empty()) return false;
+        return steady_clock::now() + duration<double>(param.tolerance) >= task_q_.top().next_run_t;
     };
 
     NameThread("Scheduler");
@@ -180,18 +235,14 @@ void Scheduler::loop() {
             std::unique_lock<std::mutex> lock(tasks_mu_);
 
             while(!timeForTask() && !stop_){
-                if(tasks_.empty()){
+                if(task_q_.empty()){
                     cv_.wait(lock);
                 }
                 else{
-                    cv_.wait_until(lock, tasks_.top().next_run_t);
+                    cv_.wait_until(lock, task_q_.top().next_run_t);
                 }
             }
             if(stop_) break;
-
-            // todo ivan. delete
-            // printf("wait precision: %f s\n",
-            //        DurationToSeconds(tasks_.top().next_run_t - std::chrono::steady_clock::now()));
         }
 
         // make action
@@ -201,13 +252,11 @@ void Scheduler::loop() {
                 std::lock_guard<std::mutex> lock(tasks_mu_);
                 if (!timeForTask() || stop_) break;
 
-                task = tasks_.top();
-                tasks_.pop();
+                // a hacky way to move, as top() returns a const ref
+                task = std::move(const_cast<ScheduledTask&>(task_q_.top()));
+                task_q_.pop();
+                if (task.task->cancelled) continue;
             }
-
-            // todo ivan. delete
-            // printf("execute precision: %f s\n",
-            //        DurationToSeconds(task.next_run_t - std::chrono::steady_clock::now()));
 
             if (task_tp_){
                 task_tp_->enqueue([this, task = std::move(task)]() mutable {executeTask(std::move(task));});

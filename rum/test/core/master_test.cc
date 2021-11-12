@@ -6,10 +6,10 @@
 using namespace std;
 using namespace rum;
 
-// todo ivan. there is no guarantee it will be success every time. most of the time,
-//  the failure reason is that system still holding the underlying socket,
+// todo ivan. very rarely, this could fail.
+//  most of the time, the failure reason is that system still holding the underlying socket,
 //  so disconnection monitoring and periodic binding trial will fail.
-//  ** There is a exception: bind to 127.0.0.1 always prompt
+//  ** Seems there's an exception: binding to 127.0.0.1 is always prompt
 TEST(MasterTest, QuickCompete){
     // this destroys global master
     rum::Master::DbgGetGlobalMaster();
@@ -29,7 +29,7 @@ TEST(MasterTest, QuickCompete){
     Log::I("QuickCompete", "destroying master 1");
     master1.reset(nullptr);
     ivtb::Stopwatch timer2;
-    while(timer.passedMs() < 100 && !master2->active.load(memory_order_relaxed)){
+    while(timer2.passedMs() < 100 && !master2->active.load(memory_order_relaxed)){
         this_thread::sleep_for(1ms);
     }
     Log::I("QuickCompete", "rebind within %.1f ms", timer2.passedMs());

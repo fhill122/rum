@@ -2,7 +2,7 @@
  * @brief
  *
  * Created by ivan on 2021/7/14.
- * @copyright Copyright (c) hzyele 2021
+ * @copyright Copyright (c) ivan 2021
  */
 #ifndef IVTB_LOG_LOG_H_
 #define IVTB_LOG_LOG_H_
@@ -31,7 +31,7 @@
 /* logging macros */
 
 #define AssertLog(Expr, Msg) \
-Log::Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
+if(!(Expr)) ivtb::Log::AssertFailure(#Expr, __FILE__, __LINE__, Msg)
 
 
 namespace ivtb{
@@ -50,8 +50,8 @@ class Log {
     };
 
 #ifdef NDEBUG
-    constexpr static Levels kDefStdLevel = Levels::i;
-    constexpr static Levels kDefFileLevel = Levels::s;
+    constexpr static Level kDefStdLevel = Levels::i;
+    constexpr static Level kDefFileLevel = Levels::s;
 #else
     constexpr static Level kDefStdLevel = Level::v;
     constexpr static Level kDefFileLevel = Level::s;
@@ -229,15 +229,13 @@ class Log {
         GlobalLogger()->eErrno(tag, content, args...);
     }
 
-    static void Assert(const char* expr_str, bool expr, const char* file, int line, std::string msg){
-        if (!expr){
-            GlobalLogger()->logString("AssertFailure", "\n"
-                    "Message:\t" + msg + "\n"
-                    "Expect:\t" + expr_str + "\n"
-                    "Where:\t" + file + ":" + std::to_string(line),
-                    Level::e);
-            abort();
-        }
+    static void AssertFailure(const char* expr_str, const char* file, int line, std::string msg){
+        GlobalLogger()->logString("AssertFailure", "\n"
+                "Message:\t" + msg + "\n"
+                "Expect:\t" + expr_str + "\n"
+                "Where:\t" + file + ":" + std::to_string(line),
+                Level::e);
+        abort();
     }
 
 };

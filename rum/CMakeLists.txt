@@ -1,10 +1,9 @@
 project(rum)
 
-include_directories(${CMAKE_SOURCE_DIR} extern/flatbuffers)
+include_directories(BEFORE ${CMAKE_SOURCE_DIR} extern)
 
 add_library(${PROJECT_NAME} SHARED
     common/common.cc
-    common/log.cc
     common/zmq_helper.cc
 
     core/internal/server_base.cc
