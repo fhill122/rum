@@ -32,5 +32,4 @@ add_library(${PROJECT_NAME} SHARED
 )
 target_link_libraries(${PROJECT_NAME} zmq)
 
-add_subdirectory(test/dumb)
 add_subdirectory(test)

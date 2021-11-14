@@ -23,3 +23,6 @@ target_link_libraries(node_test gtest rum)
 
 
 endif()
+
+add_subdirectory(dumb)
+add_subdirectory(bench)

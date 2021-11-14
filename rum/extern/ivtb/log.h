@@ -50,8 +50,8 @@ class Log {
     };
 
 #ifdef NDEBUG
-    constexpr static Level kDefStdLevel = Levels::i;
-    constexpr static Level kDefFileLevel = Levels::s;
+    constexpr static Level kDefStdLevel = Level::i;
+    constexpr static Level kDefFileLevel = Level::s;
 #else
     constexpr static Level kDefStdLevel = Level::v;
     constexpr static Level kDefFileLevel = Level::s;
