@@ -25,11 +25,6 @@
 
 namespace ivtb{
 
-double DurationToSeconds(const std::chrono::steady_clock::duration &dur){
-    using namespace std::chrono;
-    return duration_cast<duration<double>>(dur).count();
-}
-
 class Scheduler{
   public:
     struct Task{
@@ -40,14 +35,22 @@ class Scheduler{
         const std::function<void()> action;
 
         // create a one shot task
-        template<class F>
-        explicit Task(F&& f, double delay = 0, std::string name="") :
-                action(f), delay(delay), name(std::move(name)){}
+        explicit Task(std::function<void()> action, double delay = 0, std::string name=""):
+                action(std::move(action)), delay(delay), name(std::move(name)){}
 
         // create a repeated task
-        template<class F>
-        Task(F&& f, double period, double delay, std::string name = "") :
-                action(f), period(period), repeat(true), delay(delay), name(std::move(name)){}
+        explicit Task(std::function<void()> action, double period, double delay, std::string name=""):
+                action(std::move(action)), period(period), delay(delay), repeat(true), name(std::move(name)){}
+
+        // virtual ~Task() = default;
+        inline Task(const Task &rhs): name(rhs.name), repeat(rhs.repeat), period(rhs.period), delay(rhs.delay),
+                action(rhs.action){}
+        inline Task(Task&& rhs): name(std::move(rhs.name)), repeat(rhs.repeat), period(rhs.period),
+                delay(rhs.delay), action(std::move(rhs.action)){}
+
+        inline Task& operator=(const Task&) = delete;
+        inline Task& operator=(Task&&) = delete;
+        virtual ~Task() = default;
 
       private:
         friend Scheduler;
@@ -55,7 +58,12 @@ class Scheduler{
     };
 
     struct Param{
-        double tolerance = 0.1;  //seconds
+        // seconds. rather than wait, task will be executed immediately if within this time
+        double tolerance = 0.001;
+        // if task's last execution difference/period is within this number, we'll try to compensate the difference.
+        double valid_compensate_ratio = 0.5;
+        // to compensate the history periods, next task's period will be adjusted up to this ratio
+        double max_period_adjust_ratio = 0.3;
     };
 
   private:
@@ -66,6 +74,7 @@ class Scheduler{
         // double last_run_t = 0;
         std::chrono::steady_clock::time_point next_run_t = std::chrono::steady_clock::time_point::min();
         std::chrono::steady_clock::time_point last_run_t = std::chrono::steady_clock::time_point::min();
+        std::chrono::steady_clock::duration accumulated_offset{0};
 
         ScheduledTask() = default;
 
@@ -96,7 +105,9 @@ class Scheduler{
     };
 
   private:
+    // todo ivan. allow changing param.
     Param param;
+    // a priority queue so that closest task at front
     std::priority_queue<ScheduledTask, std::vector<ScheduledTask>, std::greater<ScheduledTask>> task_q_;
     // all scheduled future tasks that will be executed
     std::unordered_set<std::shared_ptr<Task>> tasks_;
@@ -120,16 +131,18 @@ class Scheduler{
 
     /**
      * Schedule a task
-     * @param task Task to be scheduled
+     * @param task Task to be scheduled, this can be used to cancel the task as well
+     * @return whether is actually scheduled (false if already there, or was cancelled)
      */
-    inline void schedule(std::shared_ptr<Task> task);
+    inline bool schedule(std::shared_ptr<Task> task);
 
     /**
      * Schedule a task.
      * Note: this version of schedule does not support task cancelling
      * @param task
+     * @return whether is actually scheduled (always true)
      */
-    inline void schedule(Task &&task);
+    inline bool schedule(Task &&task);
 
     /**
      * Cancel a task if it is possible
@@ -180,14 +193,21 @@ void Scheduler::internalSchedule(ScheduledTask &&task) {
     if (need_notify) cv_.notify_one();
 }
 
-void Scheduler::schedule(std::shared_ptr<Task> task) {
+bool Scheduler::schedule(std::shared_ptr<Task> task) {
+    {
+        std::lock_guard<std::mutex> lock(tasks_mu_);
+        if (tasks_.find(task)!=tasks_.end())
+            return false;
+    }
     ScheduledTask scheduled_task{std::move(task)};
     internalSchedule(std::move(scheduled_task));
+    return true;
 }
 
-void Scheduler::schedule(Task &&task){
+bool Scheduler::schedule(Task &&task){
     ScheduledTask scheduled_task{std::make_unique<Task>(std::move(task))};
     internalSchedule(std::move(scheduled_task));
+    return true;
 }
 
 bool Scheduler::cancel(const std::shared_ptr<Task> &task){
@@ -210,11 +230,31 @@ void Scheduler::executeTask(ScheduledTask &&task) {
         if (task.task->cancelled) return;
     }
 
+    auto last_run_t = task.last_run_t;
     task.last_run_t = steady_clock::now();
     task.task->action();
     if (task.task->repeat){
-        task.next_run_t = task.last_run_t +
-                duration_cast<steady_clock::duration>(duration<double>{task.task->period});
+        auto period = duration_cast<steady_clock::duration>(duration<double>{task.task->period});
+        if (last_run_t==std::chrono::steady_clock::time_point::min()){
+            task.next_run_t = task.last_run_t + period;
+        }
+        else{
+            auto last_period_diff = task.last_run_t - last_run_t - period;
+            // if the offset is not too crazy, we try to compensate it
+            if (last_period_diff < param.valid_compensate_ratio*period){
+                task.accumulated_offset += last_period_diff;
+            }
+            // clamp adjusted period
+            auto adjusted_period = period - task.accumulated_offset;
+            auto upper = duration_cast<steady_clock::duration>((1+param.max_period_adjust_ratio)*period);
+            auto lower = duration_cast<steady_clock::duration>((1-param.max_period_adjust_ratio)*period);
+            if (adjusted_period>upper) adjusted_period=upper;
+            else if(adjusted_period<lower) adjusted_period = lower;
+            // this is not working, why?
+            // std::max(lower, std::min(adjusted_period, upper));
+            task.next_run_t = task.last_run_t + adjusted_period;
+        }
+
         internalSchedule(std::move(task));
     }
 }
@@ -252,13 +292,16 @@ void Scheduler::loop() {
                 std::lock_guard<std::mutex> lock(tasks_mu_);
                 if (!timeForTask() || stop_) break;
 
-                // a hacky way to move, as top() returns a const ref
+                // a hacky way to move, as top() returns a const ref.
+                // here we know taks_q_ contains non const, and we lock the queue from move to pop
+                // https://stackoverflow.com/questions/20149471/move-out-element-of-std-priority-queue-in-c11
                 task = std::move(const_cast<ScheduledTask&>(task_q_.top()));
                 task_q_.pop();
                 if (task.task->cancelled) continue;
             }
 
             if (task_tp_){
+                // todo ivan. can we do multi threading? schedule next task is safe?
                 task_tp_->enqueue([this, task = std::move(task)]() mutable {executeTask(std::move(task));});
             }
             else{

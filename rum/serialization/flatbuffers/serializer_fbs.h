@@ -31,7 +31,7 @@ class SerializerFbs : public Serializer<SerializerFbs> {
 
     // v1. this worked, but not elegant
     // note: T is a pointer to const: const RootType*
-    // We can only produce a pointer instead of a object, luckily the msg_in outlives the callback
+    // We can only produce a pointer instead of an object, luckily the msg_in outlives the callback
     // template<typename T>
     // inline std::unique_ptr<T> deserialize(const zmq::message_t &msg_in,
     //                                const std::string &protocol = "") {
@@ -48,6 +48,7 @@ class SerializerFbs : public Serializer<SerializerFbs> {
         // note two things:
         // 1. the const cast is alright, as we will never modify it
         // 2. destructor will not actually do anything
+        // update: test it, really unique_ptr? flatbuffers struct seems have no field, but access methods. but is it really safe to delete?
         return std::unique_ptr<T>(const_cast<T*>(obj));
     }
 

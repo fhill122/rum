@@ -78,6 +78,18 @@ vector<NetInterface> GetNetInterfaces(){
 
 }
 
+std::string IpToStr(unsigned char ip[4]) {
+    return to_string(ip[0]) + "." +
+           to_string(ip[1]) + "." +
+           to_string(ip[2]) + "." +
+           to_string(ip[3]);
+}
+
+std::string IpFromTcp(const string &tcp_addr) {
+    // limit to 4 digits port
+    return tcp_addr.substr(6, tcp_addr.size()-12);
+}
+
 std::string GuessIp(const std::vector<NetInterface> &interfaces) {
     string ip_addr;
 
@@ -107,19 +119,20 @@ std::string GuessIp(const std::vector<NetInterface> &interfaces) {
 string GenTcpAddr() {
     static std::random_device rd;  //Will be used to obtain a seed for the random number engine
     static std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    // note: this affects ip from tcp address as well
     static std::uniform_int_distribution<> dis(49152, 65534);
     int port = dis(gen);
-    return "tcp://" + ip + ":" + to_string(port);
+    return "tcp://" + kIpStr + ":" + to_string(port);
 }
 
 string GenIpcAddr() {
     static atomic_uint64_t idPool{0};
-    return "ipc:///tmp/rum_ipc_" + to_string(pid) + "_" + to_string(idPool++);
+    return "ipc:///tmp/rum_ipc_" + to_string(kPid) + "_" + to_string(idPool++);
 }
 
 string GenItcAddr() {
     static atomic_uint64_t idPool{0};
-    return "inproc://rum_" + to_string(pid) + "_" + to_string(idPool++);
+    return "inproc://rum_" + to_string(kPid) + "_" + to_string(idPool++);
 }
 
 string BindRandTcp(zmq::socket_t &socket, int trial) {

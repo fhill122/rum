@@ -13,16 +13,16 @@ class SubscriberBaseImpl;
 
 class SubscriberBase {
   private:
-    std::shared_ptr<SubscriberBaseImpl> pimpl_;
+    SubscriberBaseImpl* pimpl_;
   public:
 
   private:
   public:
-    explicit SubscriberBase(std::unique_ptr<SubscriberBaseImpl> pimpl);
-    SubscriberBase(SubscriberBase&& rhs) noexcept ;
-    SubscriberBase& operator=(SubscriberBase&& rhs) noexcept ;
-    SubscriberBase(const SubscriberBase&) = delete;
-    SubscriberBase& operator=(const SubscriberBase&) = delete;
+    explicit SubscriberBase(SubscriberBaseImpl* pimpl);
+    SubscriberBase(SubscriberBase&& rhs) = default ;
+    SubscriberBase& operator=(SubscriberBase&& rhs) = default ;
+    SubscriberBase(const SubscriberBase&) = default;
+    SubscriberBase& operator=(const SubscriberBase&) = default;
     virtual ~SubscriberBase();
 
 };

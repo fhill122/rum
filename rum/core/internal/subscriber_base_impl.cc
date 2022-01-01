@@ -49,6 +49,8 @@ void SubscriberBaseImpl::enqueue(const Msg &msg) {
             msg_q_.pop();
         }
 
+        // todo ivan. should only have 1 callback, and 1 deserialization function,
+        //  this also provides easy binding
         if (msg.itc){
             itc_callback_(msg.msg.get());
         }
@@ -58,12 +60,16 @@ void SubscriberBaseImpl::enqueue(const Msg &msg) {
             // serialization may not take a const, but that could be handled(copy) in serialization.
             // zmq message could be directly sent without copy.
             // todo ivan. think more about this design.
+            //  at least we don't need to copy every time.
+            //  also could share the deserialization
             if (!msg.own) {
                 auto msg_p = (zmq::message_t*)msg.msg.get();
                 zmq::message_t zmq_msg( msg_p->data(), msg_p->size() );
                 ipc_callback_(zmq_msg);
             }
-            ipc_callback_(*(zmq::message_t*)msg.msg.get());
+            else{
+                ipc_callback_(*(zmq::message_t*)msg.msg.get());
+            }
         }
     });
 }

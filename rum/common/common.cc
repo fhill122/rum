@@ -15,8 +15,8 @@ namespace rum {
 
 string GetRumIp();
 
-const string ip = GetRumIp();
-const pid_t pid = getpid();
+const string kIpStr = GetRumIp();
+const pid_t kPid = getpid();
 
 string GetRumIp() {
     if (const char *env_ip = std::getenv(kIpEnv)) {
@@ -67,7 +67,7 @@ std::string GetMasterInAddr() {
         master_port = to_string(rum::kDefMasterInPort);
     }
 
-    return "tcp://" + rum::ip + ":" + master_port;
+    return "tcp://" + rum::kIpStr + ":" + master_port;
 }
 
 std::string GetMasterOutAddr() {
@@ -79,7 +79,7 @@ std::string GetMasterOutAddr() {
         master_port = to_string(rum::kDefMasterOutPort);
     }
 
-    return "tcp://" + rum::ip + ":" + master_port;
+    return "tcp://" + rum::kIpStr + ":" + master_port;
 }
 
 }

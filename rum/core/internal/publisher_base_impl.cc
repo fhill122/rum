@@ -8,6 +8,7 @@
 #include <rum/common/common.h>
 #include <rum/common/log.h>
 #include <rum/common/zmq_helper.h>
+#include "itc_manager.h"
 
 using namespace std;
 
@@ -34,7 +35,6 @@ rum::PublisherBaseImpl::PublisherBaseImpl(string topic, std::string protocol,
 PublisherBaseImpl::~PublisherBaseImpl() {
     lock_guard<mutex> lock(destr_mu_);
     if (destr_callback_) destr_callback_();
-
 }
 
 bool PublisherBaseImpl::bindTcpRaw(const std::string &addr) {
@@ -92,10 +92,10 @@ bool PublisherBaseImpl::isConnected() {
     return !conn_list_.empty();
 }
 
-void PublisherBaseImpl::addItcSub(SubscriberBaseImpl* sub_wp){
-    lock_guard<mutex> lock(itc_mu_);
-    itc_subs_.push_back(sub_wp);
-}
+// void PublisherBaseImpl::addItcSub(SubscriberBaseImpl* sub_wp){
+//     lock_guard<mutex> lock(itc_mu_);
+//     itc_subs_.push_back(sub_wp);
+// }
 
 bool PublisherBaseImpl::publishIpc(zmq::message_t &header, zmq::message_t &body) {
     lock_guard<mutex> lock(zmq_mu_);
@@ -113,21 +113,7 @@ bool PublisherBaseImpl::publishIpc(zmq::message_t &body){
 }
 
 bool PublisherBaseImpl::scheduleItc(const shared_ptr<const void> &msg) {
-    lock_guard<mutex> lock(itc_mu_);
-    for(auto itr=itc_subs_.begin(); itr!=itc_subs_.end();){
-        // weak_ptr
-        // if (auto sub = itr->lock()){
-        //     sub->enqueue(SubscriberBaseImpl::Msg{msg, false, true});
-        //     ++itr;
-        // }
-        // else{
-        //     itc_subs_.erase(itr);
-        // }
-
-        // raw ptr
-        (*itr)->enqueue(SubscriberBaseImpl::Msg{msg, false, true});
-    }
-    return true;
+    return ItcManager::GlobalManager().scheduleItc(topic_, msg);
 }
 
 int PublisherBaseImpl::send(zmq::socket_t &socket, zmq::message_t &message, bool wait) {

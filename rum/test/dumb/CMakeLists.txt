@@ -9,3 +9,5 @@ add_executable(universal_ser universal_ser.cc)
 add_executable(universal_ser_crtp universal_ser_crtp.cc)
 
 add_executable(sptr sptr.cc)
+
+add_executable(trivially_copyable trivially_copyable.cc)

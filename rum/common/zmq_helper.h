@@ -19,10 +19,26 @@ struct NetInterface{
     // bool ipv6 = false;
 };
 
+struct TcpAddress{
+    unsigned char ip[4];
+    int port;
+
+    inline bool SameIp(unsigned char ip1[4], unsigned char ip2[4]){
+        return ip1[0]==ip2[0] &&
+               ip1[1]==ip2[1] &&
+               ip1[2]==ip2[2] &&
+               ip1[3]==ip2[3];
+    }
+};
+
 // get global shared context. function instead of variable to ensure static initialization order
 const std::shared_ptr<zmq::context_t>& shared_context();
 
 std::vector<NetInterface> GetNetInterfaces();
+
+std::string IpToStr(unsigned char ip[4]);
+
+std::string IpFromTcp(const std::string &tcp_addr);
 
 std::string GuessIp(const std::vector<NetInterface> &interfaces);
 

@@ -5,13 +5,12 @@
 #include <gtest/gtest.h>
 
 #include <rum/common/log.h>
-#include <rum/rum/node.h>
+#include <rum/cpprum/node.h>
 #include <rum/core/internal/publisher_base_impl.h>
 #include <rum/common/zmq_helper.h>
 #include <rum/serialization/flatbuffers/serializer_fbs.h>
 #include "test_msg/test_point_generated.h"
 
-#include <rum/rum/node.h>
 
 using namespace std;
 using namespace rum;

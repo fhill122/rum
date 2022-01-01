@@ -1,6 +1,7 @@
 namespace rum.msg;  // yeah it is not camel case, bite me
 
 enum SyncType : byte {
+    // Add not used yet
     Add,
     Remove,
     Whole

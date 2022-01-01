@@ -4,6 +4,7 @@
 
 #include "publisher_base.h"
 #include "internal/publisher_base_impl.h"
+#include "internal/itc_manager.h"
 
 namespace rum {
 
@@ -30,7 +31,9 @@ bool PublisherBase::publish(zmq::message_t &body) {
 }
 
 bool PublisherBase::scheduleItc(const std::shared_ptr<const void> &msg) {
-    return pimpl_->scheduleItc(msg);
+    // return pimpl_->scheduleItc(msg);
+    // return ItcManager::
+    return false;
 }
 
 

@@ -78,34 +78,34 @@ int main(int argc, char** argv){
     double t;
 
     // 0.045 ms
-    t = PingPong(tcp_addr,kCount,0);
+    t = PingPong(tcp_addr,kCount,2000);
     Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
 
     // 0.034 ms
-    t = PingPong(ipc_addr,kCount,0);
+    t = PingPong(ipc_addr,kCount,2000);
     Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
 
     // well this is weird, tcp is faster on large msg?
     // 0.21 ms
-    t = PingPong(tcp_addr,kCount,1e6);
-    Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
+    // t = PingPong(tcp_addr,kCount,1e6);
+    // Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
 
     // 0.24 ms
-    t = PingPong(ipc_addr,kCount,1e6);
-    Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
+    // t = PingPong(ipc_addr,kCount,1e6);
+    // Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
 
     /* multi parge msg, timing almost same*/
 
-    t = PingPongMultiMsg(tcp_addr, kCount, 0);
+    t = PingPongMultiMsg(tcp_addr, kCount, 2000);
     Log::I(__func__, "multi msg ping pong takes %f ms on average", t/kCount);
 
-    t = PingPongMultiMsg(ipc_addr, kCount, 0);
+    t = PingPongMultiMsg(ipc_addr, kCount, 2000);
     Log::I(__func__, "multi msg ping pong takes %f ms on average", t/kCount);
 
-    t = PingPongMultiMsg(tcp_addr,kCount,1e6);
-    Log::I(__func__, "multi msg ping pong takes %f ms on average", t/kCount);
+    // t = PingPongMultiMsg(tcp_addr,kCount,1e6);
+    // Log::I(__func__, "multi msg ping pong takes %f ms on average", t/kCount);
 
-    t = PingPongMultiMsg(ipc_addr,kCount,1e6);
-    Log::I(__func__, "multi msg ping pong takes %f ms on average", t/kCount);
+    // t = PingPongMultiMsg(ipc_addr,kCount,1e6);
+    // Log::I(__func__, "multi msg ping pong takes %f ms on average", t/kCount);
 }
 

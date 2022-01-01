@@ -7,6 +7,7 @@
 #include <rum/common/common.h>
 #include <rum/common/log.h>
 #include "rum/common/zmq_helper.h"
+#include "rum/core/msg/util.h"
 
 using namespace std;
 
@@ -24,9 +25,9 @@ Master::Master(std::shared_ptr<zmq::context_t> context) :
         context_(std::move(context)) {
     sub_container_ = make_unique<SubContainer>(context_);
     auto sync_tp = std::make_shared<ivtb::ThreadPool>(1);
-    sub_ = make_unique<SubscriberBaseImpl>(kSyncTopic, move(sync_tp), 0,
+    auto sub = make_unique<SubscriberBaseImpl>(kSyncTopic, move(sync_tp), 0,
            [this](zmq::message_t& msg){syncForward(msg);}, nullptr);
-    sub_container_->addSub(sub_.get());
+    sub_container_->addSub(move(sub));
 
     pub_ = make_unique<PublisherBaseImpl>(kSyncTopic, "", context_, true);
 
@@ -135,8 +136,8 @@ Master::~Master() {
 }
 
 void Master::syncForward(zmq::message_t& msg) {
+    log.v(TAG, "forwarded a sync msg:\n\t%s", ToString(msg::GetSyncBroadcast(msg.data())).c_str());
     pub_->publishIpc(msg);
-    log.v(TAG, "forwarded a sync msg");
 }
 
 }

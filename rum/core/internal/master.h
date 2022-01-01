@@ -16,7 +16,6 @@ class Master {
   private:
     const std::shared_ptr<zmq::context_t> context_;
     std::unique_ptr<PublisherBaseImpl> pub_;
-    std::unique_ptr<SubscriberBaseImpl> sub_;
     std::unique_ptr<SubContainer> sub_container_;
 
     std::unique_ptr<std::thread> bind_t_;

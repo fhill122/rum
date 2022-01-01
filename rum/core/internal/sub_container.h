@@ -22,7 +22,8 @@ class SubContainer {
 
   private:
     // <topic, list of sub raw>
-    using SubBook = std::unordered_map<std::string, std::vector<SubscriberBaseImpl*>>;
+    using SubBook = std::unordered_map<std::string,
+                    std::vector<std::unique_ptr<SubscriberBaseImpl>>>;
 
     struct InternalTask{
         enum TaskType {kAdd, kRemove, kStop};
@@ -59,7 +60,7 @@ class SubContainer {
     explicit SubContainer(std::shared_ptr<zmq::context_t> context, bool to_bind = true);
     virtual ~SubContainer();
 
-    // unsafe raw operations, do these before connectRaw
+    // unsafe raw operations, do these before connectRaw (update ivan. why?)
     bool bindTcpRaw(const std::string &addr= "");
     bool bindIpcRaw();
     bool connectRaw(const std::string &addr);
@@ -72,7 +73,7 @@ class SubContainer {
      * @param sub sub
      * @return true if it creates a new topic
      */
-    bool addSub(SubscriberBaseImpl *sub);
+    bool addSub(std::unique_ptr<SubscriberBaseImpl> sub);
 
     /**
      * Remove a sub

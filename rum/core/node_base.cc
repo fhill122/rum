@@ -30,8 +30,9 @@ unique_ptr<SubscriberBase> NodeBase::createSubscriber(string topic,
            const function<void(const void *)> &itc_cb,
            std::string protocol) {
     // should it call pimpl method instead?
-    return make_unique<SubscriberBase>(
-           make_unique<SubscriberBaseImpl>(move(topic), tp, queue_size, ipc_cb, itc_cb, move(protocol)));
+    // return make_unique<SubscriberBase>(
+    //        make_unique<SubscriberBaseImpl>(move(topic), tp, queue_size, ipc_cb, itc_cb, move(protocol)));
+    return nullptr;
 }
 
 unique_ptr<PublisherBase> NodeBase::createPublisher(std::string topic, std::string protocol) {

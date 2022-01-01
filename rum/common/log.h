@@ -11,9 +11,8 @@ namespace rum{
 
 using Log = ivtb::Log;
 
-// static function could be using theses
-inline static Log log{};
-inline static Log printer{Log::Level::v, Log::Level::s};
+inline Log log{};
+inline Log printer{Log::Level::v, Log::Level::s};
 
 }
 

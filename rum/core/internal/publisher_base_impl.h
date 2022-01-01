@@ -25,8 +25,8 @@ class PublisherBaseImpl {
 
     std::unordered_set<std::string> conn_list_;
     // std::vector<std::weak_ptr<SubscriberBaseImpl>> itc_subs_; RUM_LOCK_BY(itc_mu_)
-    std::vector<SubscriberBaseImpl*> itc_subs_; RUM_LOCK_BY(itc_mu_)
-    std::mutex itc_mu_;
+    // std::vector<SubscriberBaseImpl*> itc_subs_; RUM_LOCK_BY(itc_mu_)
+    // std::mutex itc_mu_;
 
     std::function<void()> destr_callback_; RUM_LOCK_BY(destr_mu_)
     std::mutex destr_mu_;
@@ -53,7 +53,7 @@ class PublisherBaseImpl {
     inline std::mutex& getPubMutex(){return zmq_mu_;}
     bool isConnected();
 
-    void addItcSub(SubscriberBaseImpl *sub_wp);
+    // void addItcSub(SubscriberBaseImpl *sub_wp);
 
     bool publishIpc(zmq::message_t &header, zmq::message_t &body);
     bool publishIpc(zmq::message_t &body);

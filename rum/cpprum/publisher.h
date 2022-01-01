@@ -24,6 +24,9 @@ class Publisher : public PublisherBase{
 
     void pub(std::unique_ptr<MsgT> msg){
         std::shared_ptr<const MsgT> msg_sptr = move(msg);
+
+        // todo ivan. itc returns whether actually it is scheduled, if it is not, serialization takes ownership
+
         // pub itc
         scheduleItc(msg_sptr);
 

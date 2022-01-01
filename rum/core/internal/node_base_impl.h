@@ -8,35 +8,31 @@
 #include "subscriber_base_impl.h"
 #include "publisher_base_impl.h"
 #include "master.h"
-#include "itc_manager.h"
+#include <rum/extern/ivtb/scheduler.h>
 
 namespace rum {
 
 class NodeBaseImpl {
   private:
     const std::string name_;
-    std::vector<std::pair<std::string, std::string>> domains_;
+    std::pair<std::string, std::string> domain_;
     const int nid_;
 
     std::unique_ptr<SubContainer> sub_container_;
     std::unique_ptr<SubContainer> syncsub_container_;
     std::unique_ptr<PublisherBaseImpl> sync_pub_;
-    std::unique_ptr<SubscriberBaseImpl> sync_sub_;
-    std::vector<PublisherBaseImpl*> pub_list_;
-
+    std::unordered_map<std::string, std::vector<std::unique_ptr<PublisherBaseImpl>>> pubs_;
+    std::shared_ptr<ivtb::ThreadPool> sync_tp_ = std::make_shared<ivtb::ThreadPool>(1);
 
     // thread to broadcast sync, include heartbeat
-    std::unique_ptr<std::thread> sync_t_;
-    std::unordered_map<std::string, std::string> topics_; RUM_LOCK_BY(sync_mu_)
-    std::mutex sync_mu_;
-    std::condition_variable hb_cv_;
-    unsigned long sync_version_ = 0;
+    ivtb::Scheduler sync_scheduler_{0};
+    std::shared_ptr<ivtb::Scheduler::Task> sync_task_;
+    std::atomic<unsigned long> sync_version_{0};
     std::atomic<bool> is_down_{false};
 
     std::vector<std::string> connections_;
     std::atomic_flag connected = ATOMIC_FLAG_INIT;
 
-    static ItcManager itc_manager_;
     static std::atomic_int id_pool_;
   public:
     const std::shared_ptr<zmq::context_t> context_;
@@ -45,26 +41,31 @@ class NodeBaseImpl {
     void syncCb(zmq::message_t& msg);
     void syncF();
 
+
   public:
-    NodeBaseImpl(std::string name = "", std::string domain = "",
+    explicit NodeBaseImpl(std::string name = "", std::string domain = "",
                  std::string addr = "");
-    std::unique_ptr<SubscriberBaseImpl> createSubscriber();
 
-    void registerSubscriber(SubscriberBaseImpl *sub);
+    SubscriberBaseImpl* addSubscriber(const std::string &topic,
+              const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
+              const std::function<void(zmq::message_t&)> &ipc_cb,
+              const std::function<void(const void *)> &itc_cb,
+              std::string protocol = "");
 
-    void registerPublisher(PublisherBaseImpl *pub);
+    void removeSubscriber(SubscriberBaseImpl* &sub);
 
-    void unregisterSubscriber(SubscriberBaseImpl *sub);
+    PublisherBaseImpl * addPublisher(const std::string &topic, const std::string &protocol); RUM_THREAD_UNSAFE
 
-    void unregisterPublisher(PublisherBaseImpl *pub);
+    void removePublisher(PublisherBaseImpl *pub); RUM_THREAD_UNSAFE
 
     void shutdown();
 
     /**
-     * connect to masters. call this only once
-     * @param addrs vector of <master addr in, master addr out>
+     * connect to master. call this only once
+     * @param addr_in income address
+     * @param addr_out outgoing address
      */
-    void connect(const std::vector<std::pair<std::string, std::string>> &addrs);
+    void connect(const std::string &addr_in, const std::string &addr_out);
 };
 
 }

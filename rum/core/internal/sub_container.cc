@@ -4,9 +4,10 @@
 
 #include "sub_container.h"
 
-#include <rum/common/common.h>
-#include <rum/common/log.h>
-#include <rum/common/zmq_helper.h>
+#include "rum/common/common.h"
+#include "rum/common/log.h"
+#include "rum/common/zmq_helper.h"
+#include "rum/common/misc.h"
 #include "rum/core/internal/publisher_base_impl.h"
 #include "rum/core/msg/rum_header_generated.h"
 
@@ -134,9 +135,11 @@ bool SubContainer::loop() {
     else if (header_fb->type() == msg::MsgType::MsgType_Message){
         log.v(TAG, "received a msg of topic %s", header_fb->name()->c_str());
         // todo ivan. consider dispatch with daemon thread / multi thread
+        // todo ivan. consider: if subs_ is fixed, this lock could be avoided
         lock_guard<mutex> lock(subs_mu_);
         auto itr = subs_.find(header_fb->name()->str());
         if (itr == subs_.end()){
+            // happens if a sub just removed
             log.d(TAG, "unknown topic: %s", header_fb->name()->c_str());
             for (const auto &s : subs_){
                 log.d(TAG, "topic: %s", s.first.c_str());
@@ -166,37 +169,25 @@ void SubContainer::interrupt() {
     AssertLog(pub_res == 0, "failed to interrupt");
 }
 
-bool SubContainer::addSub(SubscriberBaseImpl *sub) {
+bool SubContainer::addSub(unique_ptr<SubscriberBaseImpl> sub) {
     lock_guard<mutex> lock(subs_mu_);
-    auto itr = subs_.find(sub->topic_);
-    if (itr == subs_.end()) {
-        subs_.emplace(sub->topic_, vector<SubscriberBaseImpl *>{sub});
-        return true;
-    } else {
-        assert(!itr->second.empty());
-        assert(find(itr->second.begin(), itr->second.end(), sub) ==  itr->second.end());
-        AssertLog(sub->protocol_ == itr->second[0]->protocol_,
+    string topic = sub->topic_;
+    string protocol = sub->protocol_;
+    auto itr = MapVecAdd(subs_, topic, move(sub));
+    if (itr!=subs_.end()){
+        AssertLog(protocol == itr->second[0]->protocol_,
                   "Adding subscriber of " + sub->protocol_ + " with different protocol");
-        itr->second.push_back(sub);
         return false;
+    }
+    else{
+        return true;
     }
 }
 
 bool SubContainer::removeSub(SubscriberBaseImpl *sub) {
     lock_guard<mutex> lock(subs_mu_);
-    auto itr = subs_.find(sub->topic_);
-    assert(itr!=subs_.end());
-    auto itr2 = find(itr->second.begin(), itr->second.end(), sub);
-    assert( itr2 != itr->second.end() );
-
-    if (itr->second.size()==1){
-        subs_.erase(itr);
-        return true;
-    }
-    else{
-        itr->second.erase(itr2);
-        return false;
-    }
+    return MapVecRemove(subs_, sub->topic_, sub,
+         [sub](const unique_ptr<SubscriberBaseImpl> &obj){return sub==obj.get();});
 }
 
 }

@@ -18,6 +18,8 @@ class SubscriberBaseImpl {
         // if own, zmq_msg could be modified directly without copy
         bool own = false;
         bool itc = false;
+
+        // todo ivan. do deserialization here
     };
 
   private:
@@ -27,8 +29,11 @@ class SubscriberBaseImpl {
     std::queue<Msg> msg_q_; RUM_LOCK_BY(queue_mu_)
     std::mutex queue_mu_;
     const size_t queue_size_; // <=0 to indicate infinite
+
+    // todo ivan. instead takes a serialization function and a callback function
     std::function<void(zmq::message_t&)> ipc_callback_;
     std::function<void(const void *)> itc_callback_;
+    std::function<void*(zmq::message_t&)> deserialize_f_;
     const bool single_t_;
 
     std::function<void()> destr_callback_; RUM_LOCK_BY(destr_mu_)

@@ -17,7 +17,6 @@ using namespace rum;
 struct SimpleNode{
     unique_ptr<SubContainer> sub_container;
     unique_ptr<PublisherBaseImpl> sync_pub;
-    unique_ptr<SubscriberBaseImpl> sync_sub;
     shared_ptr<ivtb::ThreadPool> tp = make_shared<ivtb::ThreadPool>(1);
     atomic<int> sync_count{0};
 
@@ -26,9 +25,9 @@ struct SimpleNode{
         sub_container->connectRaw(GetMasterOutAddr());
         sub_container->start();
 
-        sync_sub = make_unique<SubscriberBaseImpl>(kSyncTopic, tp, 100,
+        auto sync_sub = make_unique<SubscriberBaseImpl>(kSyncTopic, tp, 100,
             bind(&SimpleNode::syncCb, this, placeholders::_1), nullptr);
-        sub_container->addSub(sync_sub.get());
+        sub_container->addSub(move(sync_sub));
 
         sync_pub = make_unique<PublisherBaseImpl>(kSyncTopic, "", context, false);
         sync_pub->connect(GetMasterInAddr());

@@ -8,5 +8,6 @@
 #define RUM_LOCK_BY(...) ;
 
 #define RUM_THREAD_SAFE
+#define RUM_THREAD_UNSAFE
 
 #endif //RUM_COMMON_DEF_H_

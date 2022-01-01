@@ -2,7 +2,7 @@ project(rum)
 
 include_directories(BEFORE ${CMAKE_SOURCE_DIR} extern)
 
-add_library(${PROJECT_NAME} SHARED
+add_library(rumcore SHARED
     common/common.cc
     common/zmq_helper.cc
 
@@ -15,14 +15,11 @@ add_library(${PROJECT_NAME} SHARED
     core/internal/node_info.cc
     core/internal/socket_monitor.cc
     core/internal/itc_manager.cc
+    core/internal/remote_manager.cc
 
     core/publisher_base.cc
     core/subscriber_base.cc
     core/node_base.cc
-
-    rum/node.h
-    rum/subscriber.h
-    rum/publisher.h
 
     extern/zmq/zmq.hpp
 
@@ -30,6 +27,14 @@ add_library(${PROJECT_NAME} SHARED
     serialization/flatbuffers/serializer_fbs.h
     serialization/protobuf/serializer_proto.h
 )
-target_link_libraries(${PROJECT_NAME} zmq)
+target_link_libraries(rumcore zmq)
+
+add_library(cpprum SHARED
+    cpprum/node.h
+    cpprum/subscriber.h
+    cpprum/publisher.h
+)
+set_target_properties(cpprum PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(cpprum rumcore)
 
 add_subdirectory(test)

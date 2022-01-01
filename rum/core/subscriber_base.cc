@@ -8,17 +8,17 @@
 
 namespace rum {
 
-SubscriberBase::SubscriberBase(std::unique_ptr<SubscriberBaseImpl> pimpl) :
-        pimpl_(move(pimpl)) {}
+SubscriberBase::SubscriberBase(SubscriberBaseImpl *pimpl) :
+        pimpl_(pimpl) {}
 
-SubscriberBase::SubscriberBase(SubscriberBase &&rhs) noexcept {
-    pimpl_ = move(rhs.pimpl_);
-}
-
-SubscriberBase& SubscriberBase::operator=(SubscriberBase &&rhs) noexcept {
-    pimpl_ = move(rhs.pimpl_);
-    return *this;
-}
+// SubscriberBase::SubscriberBase(SubscriberBase &&rhs) noexcept {
+//     pimpl_ = move(rhs.pimpl_);
+// }
+//
+// SubscriberBase& SubscriberBase::operator=(SubscriberBase &&rhs) noexcept {
+//     pimpl_ = move(rhs.pimpl_);
+//     return *this;
+// }
 
 SubscriberBase::~SubscriberBase() = default;
 
