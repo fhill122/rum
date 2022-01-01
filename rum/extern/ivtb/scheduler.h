@@ -100,7 +100,7 @@ class Scheduler{
 
         static unsigned long genId(){
             static std::atomic<unsigned long> id_pool{1};
-            return id_pool.fetch_add(1, std::__1::memory_order_relaxed);
+            return id_pool.fetch_add(1, std::memory_order_relaxed);
         }
     };
 

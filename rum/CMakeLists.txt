@@ -1,5 +1,7 @@
 project(rum)
 
+find_package(Threads REQUIRED)
+
 include_directories(BEFORE ${CMAKE_SOURCE_DIR} extern)
 
 add_library(rumcore SHARED
@@ -27,7 +29,7 @@ add_library(rumcore SHARED
     serialization/flatbuffers/serializer_fbs.h
     serialization/protobuf/serializer_proto.h
 )
-target_link_libraries(rumcore zmq)
+target_link_libraries(rumcore zmq Threads::Threads)
 
 add_library(cpprum SHARED
     cpprum/node.h

@@ -2,6 +2,7 @@
 // Created by Ivan B on 2021/3/30.
 //
 
+#include <functional>
 #include <rum/extern/ivtb/log.h>
 
 using namespace std;

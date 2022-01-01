@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <atomic>
 
 #include <rum/extern/zmq/zmq.hpp>
 

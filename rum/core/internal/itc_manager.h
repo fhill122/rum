@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <string>
 #include <mutex>
+#include <vector>
+#include <memory>
 
 #include <rum/common/def.h>
 
