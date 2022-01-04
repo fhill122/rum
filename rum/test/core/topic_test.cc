@@ -19,25 +19,29 @@ class ImplTest : public ::testing::Test{
   public:
     static constexpr char kTopic[] = "TestTopic";
     static constexpr char kProtocol[] = "protocol";
-    NodeBaseImpl node_;
+    unique_ptr<NodeBaseImpl> node_;
     PublisherBaseImpl *pub_;
     SubscriberBaseImpl *sub_ = nullptr;
 
   private:
 
   public:
-    ImplTest() {
-        node_.connect(GetMasterInAddr(), GetMasterOutAddr());
+    ImplTest() {}
+
+    void init(NodeBaseImpl::Param param = NodeBaseImpl::Param()){
+        node_ = make_unique<NodeBaseImpl>("", move(param));
+        node_->connect(GetMasterInAddr(), GetMasterOutAddr());
         this_thread::sleep_for(50ms);
-        pub_ = node_.addPublisher(kTopic, kProtocol);
+        pub_ = node_->addPublisher(kTopic, kProtocol);
     }
 
 };
 
 TEST_F(ImplTest, ItcBasic){
+    init();
     int ipc_count = 0;
     int itc_count = 0;
-    node_.addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
+    node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
                                   [&](zmq::message_t&){ipc_count++;},
                                   [&](const void*){itc_count++;}, kProtocol);
 
@@ -54,14 +58,36 @@ TEST_F(ImplTest, ItcBasic){
 }
 
 TEST_F(ImplTest, IpcBasic) {
+    init();
     const testing::TestInfo* const test_info =
             testing::UnitTest::GetInstance()->current_test_info();
 
     int ipc_count = 0;
     int itc_count = 0;
-    node_.addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
+    node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
                         [&](zmq::message_t&){ipc_count++;},
                         [&](const void*){itc_count++;}, kProtocol);
+    printf("start companion!\n");
+    string cmd = argv0 + "_companion " + test_info->name();
+    // this_thread::sleep_for(100ms);
+    system(cmd.c_str());
+    EXPECT_EQ(itc_count, 0);
+    EXPECT_EQ(ipc_count, 10);
+    // this_thread::sleep_for(100ms);
+}
+
+TEST_F(ImplTest, TcpBasic) {
+    NodeBaseImpl::Param param;
+    param.enable_ipc_socket = false;
+    init(param);
+    const testing::TestInfo* const test_info =
+            testing::UnitTest::GetInstance()->current_test_info();
+
+    int ipc_count = 0;
+    int itc_count = 0;
+    node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
+                         [&](zmq::message_t&){ipc_count++;},
+                         [&](const void*){itc_count++;}, kProtocol);
     printf("start companion!\n");
     string cmd = argv0 + "_companion " + test_info->name();
     // this_thread::sleep_for(100ms);

@@ -25,8 +25,9 @@ atomic_int NodeBaseImpl::id_pool_{1};
 //     return addr1 + ";;;" + addr2;
 // }
 
-NodeBaseImpl::NodeBaseImpl(string name, string domain, string addr):
-        name_(move(name)), context_(shared_context()), nid_(id_pool_.fetch_add(1, memory_order_relaxed)) {
+NodeBaseImpl::NodeBaseImpl(string name, Param param):
+        name_(move(name)), param_(move(param)), context_(shared_context()),
+        nid_(id_pool_.fetch_add(1, memory_order_relaxed)) {
     sub_container_ = make_unique<SubContainer>(context_, true);
     syncsub_container_ = make_unique<SubContainer>(context_, false);
     sync_pub_ = make_unique<PublisherBaseImpl>(kSyncTopic, "", context_, false);
@@ -57,7 +58,9 @@ void NodeBaseImpl::syncCb(zmq::message_t &msg) {
         }
     };
 
-    if (IpFromTcp(sync->node()->tcp_addr()->str()) == kIpStr){
+    // connect/disconnect to ipc socket
+    if (!sync->node()->ipc_addr()->str().empty() &&
+        IpFromTcp(sync->node()->tcp_addr()->str()) == kIpStr){
         loopOp(update.topics_new,
             [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
             for (auto &pub : pubs) pub->connect(node->ipc_addr()->str());
@@ -67,14 +70,15 @@ void NodeBaseImpl::syncCb(zmq::message_t &msg) {
                    for (auto &pub : pubs) pub->disconnect(node->ipc_addr()->str());
         });
     }
+    // connect/disconnect to tcp socket
     else{
         loopOp(update.topics_new,
              [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
-                for (auto &pub : pubs) pub->connect(node->ipc_addr()->str());
+                for (auto &pub : pubs) pub->connect(node->tcp_addr()->str());
         });
         loopOp(update.topics_removed,
                [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
-                   for (auto &pub : pubs) pub->disconnect(node->ipc_addr()->str());
+                   for (auto &pub : pubs) pub->disconnect(node->tcp_addr()->str());
         });
     }
 }
@@ -190,9 +194,11 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
     syncsub_container_->start();
 
     bool tcp_binding = sub_container_->bindTcpRaw();
-    bool ipc_binding = sub_container_->bindIpcRaw();
     AssertLog(tcp_binding, "");
-    AssertLog(ipc_binding, "");
+    if (param_.enable_ipc_socket){
+        bool ipc_binding = sub_container_->bindIpcRaw();
+        AssertLog(ipc_binding, "");
+    }
     sub_container_->start();
 
     sync_task_ = make_shared<Scheduler::Task>([this]{syncF();}, kNodeHbPeriod*1e-3, 0);

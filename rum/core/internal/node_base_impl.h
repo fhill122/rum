@@ -13,6 +13,12 @@
 namespace rum {
 
 class NodeBaseImpl {
+  public:
+    struct Param{
+        bool enable_ipc_socket = true;
+        inline Param() {};
+    };
+
   private:
     const std::string name_;
     std::pair<std::string, std::string> domain_;
@@ -36,6 +42,7 @@ class NodeBaseImpl {
     static std::atomic_int id_pool_;
   public:
     const std::shared_ptr<zmq::context_t> context_;
+    const Param param_;
 
   private:
     void syncCb(zmq::message_t& msg);
@@ -43,8 +50,7 @@ class NodeBaseImpl {
 
 
   public:
-    explicit NodeBaseImpl(std::string name = "", std::string domain = "",
-                 std::string addr = "");
+    explicit NodeBaseImpl(std::string name = "", Param param = Param());
 
     SubscriberBaseImpl* addSubscriber(const std::string &topic,
               const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,

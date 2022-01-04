@@ -15,17 +15,20 @@ class ImplTest{
   public:
     static constexpr char kTopic[] = "TestTopic";
     static constexpr char kProtocol[] = "protocol";
-    NodeBaseImpl node_;
+    unique_ptr<NodeBaseImpl> node_;
     PublisherBaseImpl *pub_;
     SubscriberBaseImpl *sub_ = nullptr;
 
   private:
 
   public:
-    ImplTest() {
-        node_.connect(GetMasterInAddr(), GetMasterOutAddr());
-        pub_ = node_.addPublisher(kTopic, kProtocol);
+    ImplTest() {}
+
+    void init(NodeBaseImpl::Param param = NodeBaseImpl::Param()){
+        node_ = make_unique<NodeBaseImpl>("", move(param));
+        node_->connect(GetMasterInAddr(), GetMasterOutAddr());
         this_thread::sleep_for(50ms);
+        pub_ = node_->addPublisher(kTopic, kProtocol);
     }
 
 };
@@ -33,6 +36,7 @@ class ImplTest{
 void IpcBasic(){
     Log::I(__func__, "start");
     ImplTest impl_test;
+    impl_test.init();
     // have to be greater than heartbeat
     this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
     for (int i = 0; i < 10; ++i) {
@@ -47,6 +51,9 @@ int main(int argc, char* argv[]){
     AssertLog(argc>1, "input command");
     string cmd = argv[1];
     if (cmd == "IpcBasic"){
+        IpcBasic();
+    }
+    else if (cmd == "TcpBasic"){
         IpcBasic();
     }
     else {

@@ -13,7 +13,7 @@ using namespace std;
 namespace rum{
 
 NodeBase::NodeBase(std::string name, std::string domain, std::string addr):
-        pimpl_(make_unique<NodeBaseImpl>(name, domain, addr)){}
+        pimpl_(make_unique<NodeBaseImpl>(name)){}
 
 NodeBase::~NodeBase() =  default;
 
