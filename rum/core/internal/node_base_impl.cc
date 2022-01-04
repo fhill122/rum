@@ -10,6 +10,7 @@
 #include "rum/common/misc.h"
 #include <rum/core/msg/rum_sync_generated.h>
 #include <rum/extern/ivtb/stopwatch.h>
+#include "rum/core/msg/util.h"
 #include "remote_manager.h"
 #include "itc_manager.h"
 
@@ -102,7 +103,8 @@ void NodeBaseImpl::syncF(){
 
     builder.Finish(sync_fb);
     sync_pub_->publishIpc(zmq::message_t(builder.GetBufferPointer(), builder.GetSize()));
-    log.v(__func__, "broadcast sync once");
+    log.d(__func__, "broadcast sync once: %s",
+          ToString(msg::GetSyncBroadcast(builder.GetBufferPointer())).c_str());
 }
 
 SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,

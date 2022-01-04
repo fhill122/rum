@@ -10,6 +10,9 @@
 namespace rum{
 
 // std::string
+size_t GetSerializationSize(const std::string &str){
+
+}
 
 // vector. store as [data byte size, data]
 template<typename T>

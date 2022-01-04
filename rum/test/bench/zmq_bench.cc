@@ -30,6 +30,9 @@ double PingPong(const string &addr, int count, size_t msg_size){
     Stopwatch stopwatch;
     for (int i=0; i<count; ++i){
         zmq::message_t msg(msg_size);
+        for (int j=0; j<msg_size/sizeof(int); j++)
+            ((int*)msg.data())[j] = 0;
+
         *(int*)msg.data() = i;
         node_a.send(msg);
 
@@ -74,7 +77,7 @@ double PingPongMultiMsg(const string &addr, int count, size_t msg_size){
 
 
 int main(int argc, char** argv){
-    constexpr int kCount = 10000;
+    constexpr int kCount = 1000;
     double t;
 
     // 0.045 ms
@@ -85,14 +88,14 @@ int main(int argc, char** argv){
     t = PingPong(ipc_addr,kCount,2000);
     Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
 
-    // well this is weird, tcp is faster on large msg?
+    // well this is weird, mac tcp is faster than ipc for large msg (not the case for linux).
     // 0.21 ms
-    // t = PingPong(tcp_addr,kCount,1e6);
-    // Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
+    t = PingPong(tcp_addr,kCount,1e6);
+    Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
 
     // 0.24 ms
-    // t = PingPong(ipc_addr,kCount,1e6);
-    // Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
+    t = PingPong(ipc_addr,kCount,1e6);
+    Log::I(__func__, "ping pong takes %f ms on average", t/kCount);
 
     /* multi parge msg, timing almost same*/
 

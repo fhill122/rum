@@ -10,11 +10,12 @@
 using namespace std;
 
 namespace rum{
-std::string ToString(const msg::NodeId *node){
+
+inline std::string ToString(const msg::NodeId *node){
     return "node(" + node->tcp_addr()->str() + ":" + std::to_string(node->pid())+")";
 }
 
-std::string ToString(const msg::SyncBroadcast *sync){
+inline std::string ToString(const msg::SyncBroadcast *sync){
     string str = ToString(sync->node()) + ", " +
             "version " + to_string(sync->version()) + ", " +
             to_string(sync->subscribers()->size()) +
