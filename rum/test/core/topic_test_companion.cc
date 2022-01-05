@@ -46,6 +46,10 @@ void IpcBasic(){
     Log::I(__func__, "end");
 }
 
+void TcpBasic(){IpcBasic();}
+
+void ItcIpcBasic(){IpcBasic();}
+
 int main(int argc, char* argv[]){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
     AssertLog(argc>1, "input command");
@@ -54,7 +58,10 @@ int main(int argc, char* argv[]){
         IpcBasic();
     }
     else if (cmd == "TcpBasic"){
-        IpcBasic();
+        TcpBasic();
+    }
+    else if (cmd == "ItcIpcBasic"){
+        ItcIpcBasic();
     }
     else {
         AssertLog(false, "no command found");

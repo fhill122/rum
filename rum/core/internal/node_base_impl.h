@@ -56,22 +56,22 @@ class NodeBaseImpl {
               const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
               const std::function<void(zmq::message_t&)> &ipc_cb,
               const std::function<void(const void *)> &itc_cb,
-              std::string protocol = "");
+              std::string protocol = ""); RUM_THREAD_UNSAFE
 
-    void removeSubscriber(SubscriberBaseImpl* &sub);
+    void removeSubscriber(SubscriberBaseImpl* &sub); RUM_THREAD_UNSAFE
 
     PublisherBaseImpl * addPublisher(const std::string &topic, const std::string &protocol); RUM_THREAD_UNSAFE
 
     void removePublisher(PublisherBaseImpl *pub); RUM_THREAD_UNSAFE
 
-    void shutdown();
+    void shutdown(); RUM_THREAD_UNSAFE
 
     /**
      * connect to master. call this only once
      * @param addr_in income address
      * @param addr_out outgoing address
      */
-    void connect(const std::string &addr_in, const std::string &addr_out);
+    void connect(const std::string &addr_in, const std::string &addr_out); RUM_THREAD_UNSAFE
 };
 
 }

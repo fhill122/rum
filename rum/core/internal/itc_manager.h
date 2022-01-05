@@ -30,6 +30,7 @@ struct ItcManager {
 
     void addSub(SubscriberBaseImpl* sub); RUM_THREAD_SAFE
     void removeSub(SubscriberBaseImpl* sub); RUM_THREAD_SAFE
+    void batchRemove(const std::vector<SubscriberBaseImpl*> &subs_to_remove); RUM_THREAD_SAFE;
 
     bool scheduleItc(const std::string &topic, const std::shared_ptr<const void> &msg); RUM_THREAD_SAFE
 

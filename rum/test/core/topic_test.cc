@@ -9,6 +9,8 @@
 #include <rum/core/internal/node_base_impl.h>
 #include <rum/common/common.h>
 
+#include "rum/core/internal/itc_manager.h"
+
 using namespace std;
 using namespace rum;
 
@@ -33,6 +35,11 @@ class ImplTest : public ::testing::Test{
         node_->connect(GetMasterInAddr(), GetMasterOutAddr());
         this_thread::sleep_for(50ms);
         pub_ = node_->addPublisher(kTopic, kProtocol);
+    }
+
+    virtual ~ImplTest() {
+        // this is mandatory as ItcManager is global and contains all the history subs
+        if (node_) node_->shutdown();
     }
 
 };
@@ -67,7 +74,7 @@ TEST_F(ImplTest, IpcBasic) {
     node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
                         [&](zmq::message_t&){ipc_count++;},
                         [&](const void*){itc_count++;}, kProtocol);
-    printf("start companion!\n");
+    // printf("start companion!\n");
     string cmd = argv0 + "_companion " + test_info->name();
     // this_thread::sleep_for(100ms);
     system(cmd.c_str());
@@ -88,7 +95,7 @@ TEST_F(ImplTest, TcpBasic) {
     node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
                          [&](zmq::message_t&){ipc_count++;},
                          [&](const void*){itc_count++;}, kProtocol);
-    printf("start companion!\n");
+    // printf("start companion!\n");
     string cmd = argv0 + "_companion " + test_info->name();
     // this_thread::sleep_for(100ms);
     system(cmd.c_str());
@@ -96,6 +103,37 @@ TEST_F(ImplTest, TcpBasic) {
     EXPECT_EQ(ipc_count, 10);
     // this_thread::sleep_for(100ms);
 }
+
+TEST_F(ImplTest, ItcIpcBasic) {
+    init();
+    const testing::TestInfo* const test_info =
+            testing::UnitTest::GetInstance()->current_test_info();
+    int ipc_count = 0;
+    int itc_count = 0;
+    node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
+                         [&](zmq::message_t&){ipc_count++;},
+                         [&](const void*){itc_count++;}, kProtocol);
+    string cmd = argv0 + "_companion " + test_info->name();
+    this_thread::sleep_for(100ms);
+    auto ipc_pub_t = std::thread([&]{system(cmd.c_str());});
+
+    this_thread::sleep_for(50ms);
+    int itc_n = kNodeHbPeriod+150;
+    for (int i = 0; i < itc_n; ++i) {
+        pub_->publishIpc(zmq::message_t(1));
+        auto str_ptr = make_shared<string>("fdd");
+        pub_->scheduleItc(str_ptr);
+        this_thread::sleep_for(1ms);
+    }
+
+    ipc_pub_t.join();
+    EXPECT_EQ(itc_count, itc_n);
+    EXPECT_EQ(ipc_count, 10);
+}
+
+// seems hard to test itc ipc tcp at the same time in similar manner
+
+// todo ivan. test multi pub sub, multi topic
 
 int main(int argc, char **argv){
     google::InitGoogleLogging(argv[0]);

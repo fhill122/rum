@@ -173,11 +173,16 @@ void NodeBaseImpl::removePublisher(PublisherBaseImpl *pub) {
 }
 
 void NodeBaseImpl::shutdown() {
+    // todo ivan. broadcast its death
     // shutdown sub_container
     syncsub_container_->stop();
     sub_container_->stop();
 
     sync_tp_->stopAndClear();
+
+    // remove itc subs
+    auto subs = sub_container_->getSubs();
+    ItcManager::GlobalManager().batchRemove(subs);
 
     is_down_.store(true, memory_order_release);
     sync_scheduler_.stop();

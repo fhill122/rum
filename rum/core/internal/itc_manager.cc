@@ -29,6 +29,14 @@ void ItcManager::removeSub(SubscriberBaseImpl* sub) {
                  [sub](SubscriberBaseImpl* s){return s==sub;});
 }
 
+void ItcManager::batchRemove(const vector<SubscriberBaseImpl*> &subs_to_remove) {
+    lock_guard lock(mu);
+    for (auto* sub : subs_to_remove){
+        MapVecRemove(subs, sub->topic_, sub,
+                     [sub](SubscriberBaseImpl* s){return s==sub;});
+    }
+}
+
 bool ItcManager::scheduleItc(const string &topic, const shared_ptr<const void> &msg) {
     lock_guard lock(mu);
     auto itr = subs.find(topic);
