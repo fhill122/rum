@@ -8,7 +8,8 @@
 #include "subscriber_base_impl.h"
 #include "publisher_base_impl.h"
 #include "master.h"
-#include <rum/extern/ivtb/scheduler.h>
+#include "rum/extern/ivtb/scheduler.h"
+#include "rum/core/msg/rum_sync_generated.h"
 
 namespace rum {
 
@@ -16,7 +17,14 @@ class NodeBaseImpl {
   public:
     struct Param{
         bool enable_ipc_socket = true;
+        bool enable_tcp_socket = true;  // note: despite this setting, sync is always over tcp
         inline Param() {};
+
+        inline bool check(){
+            // no ipc communication
+            if (!enable_tcp_socket && !enable_ipc_socket) return false;
+            return true;
+        };
     };
 
   private:
@@ -47,6 +55,8 @@ class NodeBaseImpl {
   private:
     void syncCb(zmq::message_t& msg);
     void syncF();
+    bool shouldConnectIpc(const msg::SyncBroadcast *sync);
+    bool shouldConnectTcp(const msg::SyncBroadcast *sync);
 
 
   public:

@@ -58,9 +58,7 @@ void NodeBaseImpl::syncCb(zmq::message_t &msg) {
         }
     };
 
-    // connect/disconnect to ipc socket
-    if (!sync->node()->ipc_addr()->str().empty() &&
-        IpFromTcp(sync->node()->tcp_addr()->str()) == kIpStr){
+    if (shouldConnectIpc(sync)){
         loopOp(update.topics_new,
             [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
             for (auto &pub : pubs) pub->connect(node->ipc_addr()->str());
@@ -70,8 +68,7 @@ void NodeBaseImpl::syncCb(zmq::message_t &msg) {
                    for (auto &pub : pubs) pub->disconnect(node->ipc_addr()->str());
         });
     }
-    // connect/disconnect to tcp socket
-    else{
+    else if (shouldConnectTcp(sync)){
         loopOp(update.topics_new,
              [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
                 for (auto &pub : pubs) pub->connect(node->tcp_addr()->str());
@@ -109,6 +106,21 @@ void NodeBaseImpl::syncF(){
     sync_pub_->publishIpc(zmq::message_t(builder.GetBufferPointer(), builder.GetSize()));
     log.d(__func__, "broadcast sync once: %s",
           ToString(msg::GetSyncBroadcast(builder.GetBufferPointer())).c_str());
+}
+
+bool NodeBaseImpl::shouldConnectIpc(const msg::SyncBroadcast *sync) {
+    if (param_.enable_ipc_socket &&
+        sync->node()->ipc_addr()->size()>0 &&
+        IpFromTcp(sync->node()->tcp_addr()->str()) == kIpStr)
+        return true;
+    return false;
+}
+
+bool NodeBaseImpl::shouldConnectTcp(const msg::SyncBroadcast *sync) {
+    if (param_.enable_tcp_socket &&
+        sync->node()->tcp_addr()->size()>0)
+        return true;
+    return false;
 }
 
 SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
@@ -152,9 +164,9 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
         if (itr!=RemoteManager::GlobalManager().topic_book.end()){
             for (const auto *node_info : itr->second){
                 const auto* sync_fb = node_info->getSyncFb();
-                if (IpFromTcp(sync_fb->node()->tcp_addr()->str()) == kIpStr){
+                if (shouldConnectIpc(sync_fb)){
                     pub->connect(sync_fb->node()->ipc_addr()->str());
-                }else{
+                }else if (shouldConnectTcp(sync_fb)){
                     pub->connect(sync_fb->node()->tcp_addr()->str());
                 }
             }
@@ -198,8 +210,10 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
     domain_ = {addr_in, addr_out};
     syncsub_container_->start();
 
-    bool tcp_binding = sub_container_->bindTcpRaw();
-    AssertLog(tcp_binding, "");
+    if (param_.enable_tcp_socket){
+        bool tcp_binding = sub_container_->bindTcpRaw();
+        AssertLog(tcp_binding, "");
+    }
     if (param_.enable_ipc_socket){
         bool ipc_binding = sub_container_->bindIpcRaw();
         AssertLog(ipc_binding, "");

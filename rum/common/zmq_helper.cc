@@ -20,11 +20,11 @@
 
 using namespace std;
 
+namespace rum{
+
 bool StrStartWith(string full, string head){
     return strncmp(full.c_str(), head.c_str(), head.size()) == 0;
 }
-
-namespace rum{
 
 const shared_ptr<zmq::context_t>& shared_context(){
     // proper implementation
@@ -86,6 +86,7 @@ std::string IpToStr(unsigned char ip[4]) {
 }
 
 std::string IpFromTcp(const string &tcp_addr) {
+    AssertLog(tcp_addr.size()>=19, "invalid address");
     // limit to 4 digits port
     return tcp_addr.substr(6, tcp_addr.size()-12);
 }
