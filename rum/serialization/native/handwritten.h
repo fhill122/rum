@@ -5,35 +5,34 @@
 #ifndef RUM_SERIALIZATION_NATIVE_HANDWRITTEN_H_
 #define RUM_SERIALIZATION_NATIVE_HANDWRITTEN_H_
 
-#include <vector>
+#include <cstddef>
 
 // todo ivan. to test all these
 namespace rum{
 
 struct HandwrittenSerialization{
-    virtual size_t getSerializationSize() const = 0;
-    virtual void serialize(void* data) const = 0;
-    virtual void deserialize(const void* data) = 0;
+    [[nodiscard]] virtual size_t getSerializationSize() const = 0;
+    virtual void serialize(char* buffer) const = 0;
+    virtual void deserialize(const char* buffer) = 0;
 };
 
 template<typename T>
-size_t AutoSerializeGetSize(const T& t);
+size_t AutoGetSerializationSize(const T& t);
 
 template<typename T, typename... Args>
-size_t AutoSerializeGetSize(const T& t, Args&& ... args);
+size_t AutoGetSerializationSize(const T& t, Args&& ... args);
 
+template<typename T>
+void AutoSerialize(char* buffer, const T& t);
 
-// handwritten serialization for some common types
+template<typename T, typename... Args>
+void AutoSerialize(char* buffer, const T& t, const Args&... args);
 
-// vector. store as [data byte size, data]
-// template<typename T>
-// size_t GetSerializationSize(const std::vector<T> &obj){
-//     size_t size = sizeof(size_t);
-//     for (const auto &o : obj){
-//         size += AutoSerializeGetSize(o);
-//     }
-//     return size;
-// }
+template<typename T>
+void AutoDeserialize(const char* buffer, T& t);
+
+template<typename T, typename... Args>
+void AutoDeserialize(const char* buffer, T& t, Args&... args);
 
 }
 

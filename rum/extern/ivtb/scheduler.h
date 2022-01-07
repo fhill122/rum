@@ -279,7 +279,9 @@ void Scheduler::loop() {
                     cv_.wait(lock);
                 }
                 else{
-                    cv_.wait_until(lock, task_q_.top().next_run_t);
+                    // copy time as top could be moved in internalSchedule
+                    auto next_run_t = task_q_.top().next_run_t;
+                    cv_.wait_until(lock, next_run_t);
                 }
             }
             if(stop_) break;

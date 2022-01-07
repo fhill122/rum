@@ -6,50 +6,38 @@
 #define RUM_SERIALIZATION_NATIVE_SERIALIZER_NATIVE_H_
 
 #include <rum/serialization/serializer.h>
-#include <type_traits>
+#include <rum/serialization/native/autoserialize.h>
 
 namespace rum{
 
 /**
  * Native struct serialization.
  * Limitation:
- *  - trivial copyable
- *  - machine dependent, may only works on local machine
+ *  - machine dependent, may not work on devices over network that have different arch/system
  */
 class SerializerNative : public Serializer<SerializerNative>{
-    static constexpr size_t kCopyThresh = 64*10;
-
-    template <class T>
-    static void DestroyData(void *data, void *builder_p){
-        // decrease shared_ptr count
-        delete (std::shared_ptr<const T>*)builder_p;
-    }
 
   public:
-
     template <class T>
     std::unique_ptr<zmq::message_t>
-    serialize(const std::shared_ptr<const T> &object){
-        // todo ivan. check trivial, if not check if user provided serialization
-
-        static_assert(std::is_trivial<T>::value);
-
-        // worth the trouble? if on heap yes
-        if constexpr(sizeof(T)>kCopyThresh){
-            return std::make_unique<zmq::message_t>(object.get(), sizeof(T));
-        }
-
-        // hacky way to prolong shared_ptr lifetime
-        auto *sptr_cpy = new std::shared_ptr<const T>(object);
-        return std::make_unique<zmq::message_t>(object.get(), sizeof(T)
-              &SerializerNative::DestroyData<T>, sptr_cpy);
-
-
-        // v2 use auto handwritten and auto serialize
-        size_t size = AutoSerializeGetSize(*object);
+    serialize(const std::shared_ptr<const T> &object) const {
+        size_t size = AutoGetSerializationSize(*object);
+        auto msg = std::make_unique<zmq::message_t>(size);
+        AutoSerialize((char*)msg->data(), *object);
+        return msg;
     }
 
-    static std::string protocol(){
+    template<typename T>
+    std::unique_ptr<T> deserialize(const zmq::message_t &msg_in,
+                                   const std::string &msg_protocol="") const{
+        if (msg_protocol!=protocol()) return nullptr;
+        // T must have default constructor
+        auto t = std::make_unique<T>();
+        AutoDeserialize((char*)msg_in.data(), *t);
+        return t;
+    }
+
+    inline static std::string protocol(){
         return "native";
     }
 };

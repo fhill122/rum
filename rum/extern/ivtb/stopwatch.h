@@ -17,13 +17,34 @@ class Stopwatch{
 
   private:
     Timestamp start_t;
+    Duration accumulation{};
+    bool paused = false;
 
   public:
-    inline Stopwatch(){
-        start();
+    inline explicit Stopwatch(bool paused = false){
+        if(paused){
+            this->paused = true;
+        }
+        else{
+            start();
+        }
     }
 
+    // start all over
     inline void start(){
+        start_t = std::chrono::high_resolution_clock::now();
+        accumulation = Duration();
+        paused = false;
+    }
+
+    inline void pause(){
+        if(paused) return;
+        paused = true;
+        accumulation += (std::chrono::high_resolution_clock::now() - start_t);
+    }
+
+    inline void unpause(){
+        paused = false;
         start_t = std::chrono::high_resolution_clock::now();
     }
 
@@ -37,7 +58,14 @@ class Stopwatch{
         return std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1,1000>>>(duration).count();
     }
 
-    Duration passedTime(){ return std::chrono::high_resolution_clock::now() - start_t;}
+    inline Duration passedTime(){
+        if (paused){
+            return accumulation;
+        }
+        else{
+            return std::chrono::high_resolution_clock::now() - start_t + accumulation;
+        }
+    }
 
 };
 
