@@ -14,6 +14,7 @@ namespace rum {
 class SubscriberBaseImpl {
   public:
     struct Msg{
+        // pointer of itc object or zmq message
         std::shared_ptr<const void> msg;
         // if own, zmq_msg could be modified directly without copy
         bool own = false;

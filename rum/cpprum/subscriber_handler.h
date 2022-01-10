@@ -5,13 +5,13 @@
 #ifndef RUM_RUM_SUBSCRIBER_H_
 #define RUM_RUM_SUBSCRIBER_H_
 
-#include <rum/core/subscriber_base.h>
-#include <rum/serialization/serializer.h>
+#include "rum/core/subscriber_base_handler.h"
+#include "rum/serialization/serializer.h"
 
 namespace rum {
 
 template <class SerializerT, class MsgT>  // add PubT is serialization required
-class Subscriber : public SubscriberBase{
+class SubscriberHandler : public SubscriberBaseHandler{
   private:
     static Serializer<SerializerT> s_;
   public:
@@ -19,9 +19,10 @@ class Subscriber : public SubscriberBase{
   private:
 
   public:
-    explicit Subscriber(SubscriberBase &&base) : SubscriberBase(std::move(base)) {}
+    explicit SubscriberHandler(SubscriberBaseHandler &&base) : SubscriberBaseHandler(std::move(base)) {}
+    SubscriberHandler() : SubscriberBaseHandler(nullptr){};
 
-    static std::function<void(zmq::message_t&)> GenerateIpcCb(
+    static std::function<void(Message &)> GenerateIpcCb(
             const std::function<void(const MsgT&)> &callback_f){
         return [&](zmq::message_t &msg){
             callback_f(*s_.template deserialize<MsgT>(msg));
@@ -30,7 +31,7 @@ class Subscriber : public SubscriberBase{
 
     static std::function<void(const void *)> GenerateItcCb(
             const std::function<void(const MsgT&)> &callback_f){
-        return s_.template itcFuncConvert(callback_f);
+        return s_.template ipcToItcCallback(callback_f);
     }
 
     static const Serializer<SerializerT>& GetSerializer(){
@@ -40,19 +41,19 @@ class Subscriber : public SubscriberBase{
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-template<class SerializerT, class MsgT>
-Serializer<SerializerT> Subscriber<SerializerT, MsgT>::s_{};
-
 // template<class SerializerT, class MsgT>
-// std::function<void(zmq::message_t &)> Subscriber<SerializerT, MsgT>::GenerateIpcCb(const std::function<void(
+// Serializer<SerializerT> SubscriberHandler<SerializerT, MsgT>::s_{};
+//
+// template<class SerializerT, class MsgT>
+// std::function<void(Message &)> SubscriberHandler<SerializerT, MsgT>::GenerateIpcCb(const std::function<void(
 //         const MsgT &)> &callback_f) {
 //     return [&](zmq::message_t &msg){
 //         callback_f(*s_.template deserialize<MsgT>(msg));
 //     };
 // }
-
+//
 // template<class SerializerT, class MsgT>
-// std::function<void(std::shared_ptr<void> &)> Subscriber<SerializerT, MsgT>::GenerateItcCb(const std::function<
+// std::function<void(std::shared_ptr<void> &)> SubscriberHandler<SerializerT, MsgT>::GenerateItcCb(const std::function<
 //         void(const MsgT &)> &callback_f) {
 //     return [&](std::shared_ptr<void> &itc_msg){
 //         auto msg = s_.template itcTypeConvert<MsgT>(itc_msg);

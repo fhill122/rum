@@ -25,7 +25,7 @@ atomic_int NodeBaseImpl::id_pool_{1};
 //     return addr1 + ";;;" + addr2;
 // }
 
-NodeBaseImpl::NodeBaseImpl(string name, Param param):
+NodeBaseImpl::NodeBaseImpl(string name, NodeParam param):
         name_(move(name)), param_(move(param)), context_(shared_context()),
         nid_(id_pool_.fetch_add(1, memory_order_relaxed)) {
     sub_container_ = make_unique<SubContainer>(context_, true);
@@ -126,9 +126,10 @@ bool NodeBaseImpl::shouldConnectTcp(const msg::SyncBroadcast *sync) {
 SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
                             const shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
                             const function<void(zmq::message_t&)> &ipc_cb,
-                            const function<void(const void *)> &itc_cb, string protocol) {
+                            const function<void(const void *)> &itc_cb,
+                            const string &protocol) {
     auto sub = make_unique<SubscriberBaseImpl>(
-            topic, tp, queue_size, ipc_cb, itc_cb, move(protocol));
+            topic, tp, queue_size, ipc_cb, itc_cb, protocol);
     auto *sub_raw = sub.get();
     bool new_topic = sub_container_->addSub(move(sub));
     if (new_topic){

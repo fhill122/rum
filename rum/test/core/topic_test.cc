@@ -32,7 +32,7 @@ class ImplTest : public ::testing::Test{
   public:
     ImplTest() {}
 
-    void init(NodeBaseImpl::Param param = NodeBaseImpl::Param()){
+    void init(NodeParam param = NodeParam()){
         node_ = make_unique<NodeBaseImpl>("", move(param));
         node_->connect(GetMasterInAddr(), GetMasterOutAddr());
         // this_thread::sleep_for(50ms);
@@ -61,7 +61,7 @@ class ImplMultiTest : public ::testing::Test{
     atomic_int shared_itc_count{0};
 
     void init(int n_topics, int n_subs, int n_pubs,
-              NodeBaseImpl::Param param = NodeBaseImpl::Param()){
+              NodeParam param = NodeParam()){
         node_ = make_unique<NodeBaseImpl>("", move(param));
         node_->connect(GetMasterInAddr(), GetMasterOutAddr());
 
@@ -119,7 +119,7 @@ TEST_F(ImplTest, TcpBasic) {
 }
 
 TEST_F(ImplTest, TcpIcpMismatched) {
-    NodeBaseImpl::Param param;
+    NodeParam param;
     param.enable_tcp_socket = false;
     init(move(param));
 

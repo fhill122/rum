@@ -86,15 +86,15 @@ void AutoDeserialize(const char *buffer, T &t, Args &... args) {
 
 #define AUTO_SERIALIZE_MEMBERS(...) \
     [[nodiscard]] size_t getSerializationSize() const override { \
-        return AutoGetSerializationSize(__VA_ARGS__);            \
+        return rum::AutoGetSerializationSize(__VA_ARGS__);            \
     }                                \
                                      \
     void serialize(char *_buffer_data__) const override {        \
-        AutoSerialize(_buffer_data__, __VA_ARGS__);              \
+        rum::AutoSerialize(_buffer_data__, __VA_ARGS__);              \
     }                               \
                                     \
     void deserialize(const char *_buffer_data__) override {      \
-        AutoDeserialize(_buffer_data__, __VA_ARGS__);            \
+        rum::AutoDeserialize(_buffer_data__, __VA_ARGS__);            \
     }
 
 

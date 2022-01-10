@@ -8,6 +8,7 @@
 #include "subscriber_base_impl.h"
 #include "publisher_base_impl.h"
 #include "master.h"
+#include "rum/common/node_param.h"
 #include "rum/extern/ivtb/scheduler.h"
 #include "rum/core/msg/rum_sync_generated.h"
 
@@ -15,17 +16,6 @@ namespace rum {
 
 class NodeBaseImpl {
   public:
-    struct Param{
-        bool enable_ipc_socket = true;
-        bool enable_tcp_socket = true;  // note: despite this setting, sync is always over tcp
-        inline Param() {};
-
-        inline bool check(){
-            // no ipc communication
-            if (!enable_tcp_socket && !enable_ipc_socket) return false;
-            return true;
-        };
-    };
 
   private:
     const std::string name_;
@@ -50,7 +40,7 @@ class NodeBaseImpl {
     static std::atomic_int id_pool_;
   public:
     const std::shared_ptr<zmq::context_t> context_;
-    const Param param_;
+    const NodeParam param_;
 
   private:
     void syncCb(zmq::message_t& msg);
@@ -60,13 +50,13 @@ class NodeBaseImpl {
 
 
   public:
-    explicit NodeBaseImpl(std::string name = "", Param param = Param());
+    explicit NodeBaseImpl(std::string name = "", NodeParam param = NodeParam());
 
     SubscriberBaseImpl* addSubscriber(const std::string &topic,
               const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
               const std::function<void(zmq::message_t&)> &ipc_cb,
               const std::function<void(const void *)> &itc_cb,
-              std::string protocol = ""); RUM_THREAD_UNSAFE
+              const std::string &protocol = ""); RUM_THREAD_UNSAFE
 
     void removeSubscriber(SubscriberBaseImpl* &sub); RUM_THREAD_UNSAFE
 

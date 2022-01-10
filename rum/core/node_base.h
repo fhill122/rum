@@ -5,11 +5,12 @@
 #ifndef RUM_CORE_NODE_BASE_H_
 #define RUM_CORE_NODE_BASE_H_
 
-#include <rum/extern/ivtb/thread_pool.h>
-
 #include <utility>
-#include "subscriber_base.h"
-#include "publisher_base.h"
+
+#include "rum/common/thread_pool.h"
+#include "rum/common/node_param.h"
+#include "subscriber_base_handler.h"
+#include "publisher_base_handler.h"
 
 namespace rum {
 
@@ -21,30 +22,28 @@ class NodeBase {
 
   public:
 
-  private:
+  protected:
+    explicit NodeBase(const std::string &name = "", const NodeParam &param = NodeParam());
 
   public:
-    NodeBase(std::string name = "", std::string domain = "", std::string addr = "");
+    static void Init(const NodeParam &param = NodeParam());
+
+    static std::unique_ptr<NodeBase>& GlobalNode();
+
 
     virtual ~NodeBase();
 
-    // std::unique_ptr<SubscriberBaseImpl> createSubscriberImpl(std::string topic,
-    //     const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
-    //     const std::function<void(zmq::message_t&)> &ipc_cb,
-    //     const std::function<void(std::shared_ptr<void>&)> &itc_cb);
-
-    std::unique_ptr<SubscriberBase> createSubscriber(std::string topic,
-        const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
+    SubscriberBaseHandler addSubscriber(const std::string &topic,
+        const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
         const std::function<void(zmq::message_t&)> &ipc_cb,
-        const std::function<void(const void *)> &itc_cb, std::string protocol = "");
+        const std::function<void(const void *)> &itc_cb,
+        const std::string &protocol);
 
-    std::unique_ptr<PublisherBase> createPublisher(std::string topic, std::string protocol);
+    void removeSubscriber(SubscriberBaseHandler &subscriber_handler);
 
+    PublisherBaseHandler addPublisher(const std::string &topic, const std::string &protocol);
 
-    // todo ivan. should we switch to this api?
-    PublisherBase* addPublisher();
-
-    SubscriberBase* addSubscriber();
+    void removePublisher(PublisherBaseHandler &publisher_handler);
 
 };
 

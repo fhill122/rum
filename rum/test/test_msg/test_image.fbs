@@ -2,6 +2,7 @@
 namespace rum.test.msg;
 
 table Image{
+    frame_id:int32;
     w:uint32;
     h:uint32;
     format:string;

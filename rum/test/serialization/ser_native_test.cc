@@ -157,7 +157,6 @@ TEST(Native, CustomDefined){
 
     ASSERT_EQ(*obj, *obj2);
 }
-// todo ivan. doing here, sanitiser test, ...
 
 int main(int argc, char **argv){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::v);

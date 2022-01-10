@@ -5,8 +5,8 @@
 #ifndef RUM_SERIALIZATION_FLATBUFFERS_SERIALIZER_FBS_H_
 #define RUM_SERIALIZATION_FLATBUFFERS_SERIALIZER_FBS_H_
 
-#include <rum/serialization/serializer.h>
-#include <flatbuffers/flatbuffers.h>
+#include "rum/serialization/serializer.h"
+#include "flatbuffers/flatbuffers.h"
 
 namespace rum {
 
@@ -20,12 +20,12 @@ class SerializerFbs : public Serializer<SerializerFbs> {
   public:
 
     // always publish the builder, no other types
-    template<class T =  void>
-    std::unique_ptr<zmq::message_t>
+    template<class T =  flatbuffers::FlatBufferBuilder>
+    std::unique_ptr<Message>
     serialize(const std::shared_ptr<const flatbuffers::FlatBufferBuilder> &builder) const {
         // to achieve zero-copy, we extend the life of builder beyond this function
         auto *builder_cpy = new std::shared_ptr<const flatbuffers::FlatBufferBuilder>(builder);
-        return std::make_unique<zmq::message_t>((*builder_cpy)->GetBufferPointer(),
+        return std::make_unique<Message>((*builder_cpy)->GetBufferPointer(),
             (*builder_cpy)->GetSize(), &SerializerFbs::DestroyData, builder_cpy);
     }
 
@@ -41,7 +41,7 @@ class SerializerFbs : public Serializer<SerializerFbs> {
 
     // v2. T is just the root type
     template<typename T>
-    inline std::unique_ptr<T> deserialize(const zmq::message_t &msg_in,
+    inline std::unique_ptr<T> deserialize(const Message &msg_in,
                                           const std::string &msg_protocol = "") const {
         if (msg_protocol!=protocol()) return nullptr;
         const auto *obj = flatbuffers::GetRoot<T>(msg_in.data());
@@ -64,13 +64,18 @@ class SerializerFbs : public Serializer<SerializerFbs> {
 
     template<typename SubT, typename PubT = void>
     std::function<void(const void *)>
-    itcFuncConvert(const std::function<void(const SubT&)> &callback_f) const {
+    ipcToItcCallback(const std::function<void(const SubT&)> &callback_f) const {
         return [&](const void *itc_msg){
             auto builder_p = (const flatbuffers::FlatBufferBuilder*)itc_msg;
             const SubT *obj = flatbuffers::GetRoot<SubT>(builder_p->GetBufferPointer());
             callback_f(*obj);
         };
     }
+    //
+    // const void* pubToSubType(const void* pub_obj) const{
+    //     auto *builder_p = (const flatbuffers::FlatBufferBuilder*)pub_obj;
+    //     return ((S*)this)-> template pubToSubType(pub_obj);
+    // }
 
     static std::string protocol() {
         return "fbs";

@@ -1,6 +1,7 @@
 find_library(GTEST_LIB gtest)
 if (GTEST_LIB)
 
+# todo ivan. check Glog library
 find_package(Glog REQUIRED)
 
 add_executable(discovery_raw_tet
@@ -17,27 +18,37 @@ target_link_libraries(zmq_test gtest rumcore)
 
 # core
 
-add_executable(master_test
+add_executable(core_master_test
     core/master_test.cc)
-target_link_libraries(master_test gtest rumcore)
+target_link_libraries(core_master_test gtest rumcore)
 
-add_executable(node_test
+add_executable(core_node_test
     core/node_test.cc)
-target_link_libraries(node_test gtest rumcore)
+target_link_libraries(core_node_test gtest rumcore)
 
-add_executable(topic_test
+add_executable(core_topic_test
     core/topic_test.cc)
-target_link_libraries(topic_test gtest rumcore Glog)
+target_link_libraries(core_topic_test gtest rumcore Glog)
 
-add_executable(topic_test_companion
+add_executable(core_topic_test_companion
     core/topic_test_companion.cc)
-target_link_libraries(topic_test_companion rumcore)
+target_link_libraries(core_topic_test_companion rumcore)
 
 # serialization
 
-add_executable(serialization_test
-    serialization/serialization_test.cc)
-target_link_libraries(serialization_test gtest rumcore)
+add_executable(ser_native_test
+    serialization/ser_native_test.cc)
+target_link_libraries(ser_native_test gtest rumcore)
+
+add_executable(ser_fb_test
+    serialization/ser_fb_test.cc)
+target_link_libraries(ser_fb_test gtest rumcore)
+
+# cpprum
+
+add_executable(cpprum_topic_test
+    cpprum/topic_test.cc)
+target_link_libraries(cpprum_topic_test gtest rumcore Glog)
 
 endif()
 

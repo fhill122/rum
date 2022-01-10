@@ -16,20 +16,21 @@ namespace rum {
 class Buffer {
   private:
     char *data_ = nullptr;
-    unsigned int size_ = 0;
+    size_t size_ = 0;
 
   public:
     Buffer() = default;
 
     virtual ~Buffer() = default;;
 
-    explicit Buffer(unsigned int size) {
+    explicit Buffer(size_t size) {
         init(size);
     }
 
-    Buffer (char *data, unsigned int size): data_(data), size_(size){}
+    // taking exist data, careful with clear
+    Buffer (char *data, size_t size): data_(data), size_(size){}
 
-    void init(unsigned int size) {
+    void init(size_t size) {
         assert(size == 0);
         size_ = size;
         data_ = new char[size];
@@ -47,22 +48,22 @@ class Buffer {
      * @param src_size size_ of data_ to be filled
      * @param offset offset start place
      */
-    void fill(void *src, unsigned int src_size, unsigned int offset = 0) {
+    void fill(void *src, size_t src_size, size_t offset = 0) {
         assert(src_size + offset <= size_);
-        memcpy(getDataP() + offset, src, src_size);
+        memcpy(getData() + offset, src, src_size);
     }
 
     void fill(void *src) { fill(src, size_); }
 
-    char *getDataP() {
+    [[nodiscard]] char *getData() {
         return data_;
     }
 
-    const char *getDataP() const {
+    [[nodiscard]] const char *getData() const {
         return data_;
     }
 
-    size_t getSize() const {
+    [[nodiscard]] size_t getSize() const {
         return size_;
     }
 
@@ -77,7 +78,7 @@ class BufferScoped : public Buffer {
   public:
     BufferScoped() = default;
 
-    explicit BufferScoped(unsigned int size) : Buffer(size) {}
+    explicit BufferScoped(size_t size) : Buffer(size) {}
 
     ~BufferScoped() override {
         clear();

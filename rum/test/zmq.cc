@@ -29,16 +29,16 @@ using namespace rum;
 class MonitorTest : public testing::Test{
   public:
     // these have to be above monitor_
-    vector<pair<int, string>> events;
-    mutable mutex events_mu;
+    vector<pair<int, string>> events_;
+    mutable mutex mu_;
 
     unique_ptr<zmq::socket_t> socket_;  // monitored socket
     unique_ptr<rum::ZmqMonitor> monitor_;
     unique_ptr<zmq::socket_t> socket_test_;
 
     bool getEvent(int event, string &address){
-        lock_guard<mutex> lock(events_mu);
-        for (const auto &e : events){
+        lock_guard<mutex> lock(mu_);
+        for (const auto &e : events_){
             if (e.first == event){
                 address = e.second;
                 return true;
@@ -48,14 +48,14 @@ class MonitorTest : public testing::Test{
     }
 
     void clearEvents(){
-        lock_guard<mutex> lock(events_mu);
-        events.clear();
+        lock_guard<mutex> lock(mu_);
+        events_.clear();
     }
 
     void printEvents(){
-        lock_guard<mutex> lock(events_mu);
-        string str = "Have received " + to_string(events.size()) + " events: ";
-        for (const auto &e : events){
+        lock_guard<mutex> lock(mu_);
+        string str = "Have received " + to_string(events_.size()) + " events: ";
+        for (const auto &e : events_){
             str += to_string(e.first) + "@" + e.second + "\t";
         }
         Log::V(__func__, str);
@@ -71,8 +71,8 @@ class MonitorTest : public testing::Test{
         monitor_ = make_unique<rum::ZmqMonitor>(*socket_);
         monitor_->start([this](const zmq_event_t &event, const char *address){
             {
-                lock_guard<mutex> lock(events_mu);
-                events.emplace_back(event.event, address);
+                lock_guard<mutex> lock(mu_);
+                events_.emplace_back(event.event, address);
             }
             constexpr char kTag[] = "MonitorCb";
             switch (event.event) {
@@ -221,7 +221,48 @@ TEST_F(MonitorTest, DisconnectOnRemoteCrash){
 }
 
 TEST(MultiPartMsgTest, latency){
+// todo ivan, benched in bench, but the bug is not tested
+}
 
+
+struct ZeroCopy : public testing::Test{
+    unique_ptr<zmq::socket_t> sub;
+    unique_ptr<zmq::socket_t> pub;
+
+    ZeroCopy(){
+        sub = make_unique<zmq::socket_t>(*rum::shared_context(), ZMQ_SUB);
+        sub->setsockopt(ZMQ_SUBSCRIBE, nullptr, 0);
+        pub = make_unique<zmq::socket_t>(*rum::shared_context(), ZMQ_PUB);
+    }
+
+};
+
+TEST_F(ZeroCopy, ModificationTest){
+    string addr = rum::BindTcp(*sub);
+    ASSERT_FALSE(addr.empty());
+    pub->connect(addr);
+
+
+    size_t size = 10240;
+    char* data = new char[size];
+    for (size_t i=0; i<size; ++i){
+        data[i] = (char)i;
+    }
+
+    this_thread::sleep_for(100ms);
+    Log::D(__func__, "send");
+    for (int i = 0; i < 100; ++i) {
+        zmq::message_t message(data,size,[](void*,void*){Log::I("msg_destructor", "dead");});
+        pub->send(message);
+        this_thread::sleep_for(1ms);
+    }
+
+    this_thread::sleep_for(100ms);
+    for (size_t i=0; i<size; ++i){
+        EXPECT_EQ(data[i], (char)i);
+    }
+
+    Log::I(__func__, "all done");
 }
 
 int main(int argc, char **argv){

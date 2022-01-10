@@ -23,7 +23,7 @@ class ImplTest{
   public:
     ImplTest() {}
 
-    void init(NodeBaseImpl::Param param = NodeBaseImpl::Param()){
+    void init(NodeParam param = NodeParam()){
         node_ = make_unique<NodeBaseImpl>("", move(param));
         node_->connect(GetMasterInAddr(), GetMasterOutAddr());
         this_thread::sleep_for(50ms);
@@ -43,7 +43,7 @@ class ImplMultiTest{
     atomic_int shared_itc_count{0};
 
     void init(int n_topics, int n_pubs,
-              NodeBaseImpl::Param param = NodeBaseImpl::Param()){
+              NodeParam param = NodeParam()){
         node_ = make_unique<NodeBaseImpl>("", move(param));
         node_->connect(GetMasterInAddr(), GetMasterOutAddr());
 
@@ -74,7 +74,7 @@ void IpcBasic(){
 void TcpBasic(){
     Log::I(__func__, "start");
     ImplTest impl_test;
-    NodeBaseImpl::Param param;
+    NodeParam param;
     param.enable_ipc_socket = false;
     impl_test.init(param);
     // have to be greater than heartbeat
@@ -112,7 +112,7 @@ void MultiTcp(){
 
     Log::I(__func__, "start");
     ImplMultiTest test;
-    NodeBaseImpl::Param param;
+    NodeParam param;
     param.enable_ipc_socket = false;
     test.init(kNTopics,kNPubs, move(param));
     // have to be greater than heartbeat

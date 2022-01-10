@@ -19,8 +19,8 @@ add_library(rumcore SHARED
     core/internal/itc_manager.cc
     core/internal/remote_manager.cc
 
-    core/publisher_base.cc
-    core/subscriber_base.cc
+    core/publisher_base_handler.cc
+    core/subscriber_base_handler.cc
     core/node_base.cc
 
     extern/zmq/zmq.hpp
@@ -33,8 +33,9 @@ target_link_libraries(rumcore zmq Threads::Threads)
 
 add_library(cpprum SHARED
     cpprum/node.h
-    cpprum/subscriber.h
-    cpprum/publisher.h
+    cpprum/rum.h
+    cpprum/subscriber_handler.h
+    cpprum/publisher_handler.h
 )
 set_target_properties(cpprum PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(cpprum rumcore)
