@@ -35,15 +35,10 @@ struct SimpleFbNode : public ::testing::Test{
     }
 
     void subCallback(const shared_ptr<const Message> &msg){
-        const test::msg::Image* img = test::msg::GetImage(msg->data());
-        log.w(__func__, "id %d, %dx%d, %s", img->frame_id(), img->w(), img->h(),
-              img->format()->c_str());
-        log.i(__func__, "shared count: %d", msg.use_count());
         received_msgs.push_back(msg);
-        log.i(__func__, "shared count: %d", msg.use_count());
     }
 
-    unique_ptr<flatbuffers::FlatBufferBuilder> createImage(){
+    static unique_ptr<flatbuffers::FlatBufferBuilder> CreateImage(){
         static int id=0;
 
         vector<int8_t> img_data = {1,2,3,4};
@@ -62,20 +57,20 @@ TEST_F(SimpleFbNode, ItcTest){
     constexpr int kNum = 10;
 
     for (int i = 0; i < kNum; ++i) {
-        pub.pub(createImage());
+        pub.pub(CreateImage());
         this_thread::sleep_for(10ms);
     }
 
     EXPECT_EQ(received_msgs.size(), kNum);
-    // todo ivan. doing here
     for (int i = 0; i < kNum; ++i) {
-        log.i(__func__, "shared count: %d", received_msgs[i].use_count());
-
         const test::msg::Image* img = test::msg::GetImage(received_msgs[i]->data());
-        log.w(__func__, "received msg of size %zu", received_msgs[i]->size());
-        // EXPECT_EQ(i, img->frame_id());
-        log.w(__func__, "%d: %d, %dx%d, %s", i, img->frame_id(), img->w(), img->h(),
-              img->format()->c_str());
+        EXPECT_EQ(img->frame_id(), i);
+        EXPECT_EQ(img->w(), 2);
+        EXPECT_EQ(img->h(), 2);
+        EXPECT_EQ(img->data()->Get(0), int8_t(1));
+        EXPECT_EQ(img->data()->Get(1), int8_t(2));
+        EXPECT_EQ(img->data()->Get(2), int8_t(3));
+        EXPECT_EQ(img->data()->Get(3), int8_t(4));
     }
 }
 

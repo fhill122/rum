@@ -41,11 +41,13 @@ class SerializerFbs : public Serializer<SerializerFbs> {
     template<typename SubT = Message>
     ItcFunc generateItcCallback(const SubFunc<SubT> &callback_f) const{
         return [callback_f](const std::shared_ptr<const void>& msg){
-            auto builder_p = (const flatbuffers::FlatBufferBuilder*)msg.get();
-            // create a dummy message from builder data and handles no destruction
+            auto *builder_cpy = new std::shared_ptr<const flatbuffers::FlatBufferBuilder>(
+                    std::static_pointer_cast<const flatbuffers::FlatBufferBuilder>(msg) );
+
+            // create a message from builder data and prolong builder life
             auto message = std::make_shared<Message>(
-                    builder_p->GetBufferPointer(), builder_p->GetSize(),
-                    [](void*,void*){printf("destroy\n");} );
+                    (*builder_cpy)->GetBufferPointer(), (*builder_cpy)->GetSize(),
+                    &SerializerFbs::DestroyData, builder_cpy);
             callback_f(message);
         };
     }

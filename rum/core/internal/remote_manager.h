@@ -16,7 +16,6 @@
 namespace rum{
 
 
-// todo ivan. doing here
 struct RemoteManager {
 
     struct NodeUpdate{
