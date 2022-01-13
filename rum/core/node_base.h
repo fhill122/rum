@@ -9,6 +9,7 @@
 
 #include "rum/common/thread_pool.h"
 #include "rum/common/node_param.h"
+#include "rum/serialization/serializer.h"
 #include "subscriber_base_handler.h"
 #include "publisher_base_handler.h"
 
@@ -35,8 +36,9 @@ class NodeBase {
 
     SubscriberBaseHandler addSubscriber(const std::string &topic,
         const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
-        const std::function<void(zmq::message_t&)> &ipc_cb,
-        const std::function<void(const void *)> &itc_cb,
+        const IpcFunc &ipc_cb,
+        const ItcFunc &itc_cb,
+        const DeserFunc &deserialize_f,
         const std::string &protocol);
 
     void removeSubscriber(SubscriberBaseHandler &subscriber_handler);

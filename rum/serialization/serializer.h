@@ -11,13 +11,25 @@
 
 namespace rum {
 
+template<typename T>
+using SubFunc = std::function<void(const std::shared_ptr<const T>)>;
+// void is actually the type that DeserFunc converts to
+using IpcFunc = std::function<void(const std::shared_ptr<const void>&)>;
+// void is actually the type of scheduled itc object
+using ItcFunc = std::function<void(const std::shared_ptr<const void>&)>;
+using DeserFunc = std::function<
+        std::shared_ptr<const void> (std::shared_ptr<const Message>&, const std::string&)
+                >;
+
+
 template<typename S>
 class Serializer {
 
   public:
 
+    // todo ivan. check if return null in rum
     /**
-     * serialization function
+     * Serialization function
      * @tparam T Object type
      * @param t Object that is taken to serialize (it maybe moved).
      * shared as it may pass to itc sub at the same time, and we choose shared_ptr over raw pointer or
@@ -29,37 +41,44 @@ class Serializer {
         return ((S*)this)-> template serialize<T>(t);
     }
 
-    // deserialization is done in each subscriber
-    // todo ivan return const pointer maybe, as in memory serialization cannot get unique_ptr.
-    //  maybe in this case return unique_ptr<T*>
+    // todo ivan. check if return null in rum
     /**
-     *
-     * @tparam T
-     * @param msg_in
-     * @param protocol
+     * Deserialization function
+     * @tparam T Deserialized object type
+     * @param msg_in Income Message object
+     * @param protocol Protocol
      * @return
      */
     template<typename T>
-    std::unique_ptr<T> deserialize(const Message &msg_in,
-                                   const std::string &protocol="") const{
+    std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
+                                   const std::string &protocol) const{
         return ((S*)this)-> template deserialize<T>(msg_in, protocol);
     }
 
-    // for serialization that have different type in pub and sub.
-    // Useful with in memory serialization like flatbuffers, capnproto, etc.
-    template<typename SubT, typename PubT = void>
-    std::function<void(const void *)>
-    ipcToItcCallback(const std::function<void(const SubT&)> &callback_f) const {
-        return ((S *) this)->template ipcToItcCallback<SubT, PubT>(callback_f);
+    /**
+     * Generate itc callback given user input callback, for most cases they are same
+     * @tparam SubT User provided callback object type
+     * @param callback_f User provided callback function
+     * @return Itc callback function that is invoked on published objet
+     */
+    template<typename SubT>
+    ItcFunc generateItcCallback(const SubFunc<SubT> &callback_f) const{
+        return ((S*)this) -> template generateItcCallback<SubT>(callback_f);
     }
-    //
-    // template<typename SubT, typename PubT>
-    // const SubT* pubToSubType(const PubT* pub_obj) const{
-    //     return ((S*)this)-> template pubToSubType(pub_obj);
-    // }
 
-    static std::string protocol(){
-        return S::rotocol();
+    /**
+     * Generate ipc callback given user input callback, for most cases they are same
+     * @tparam SubT User provided callback object type
+     * @param callback_f User provided callback function
+     * @return Ipc callback function that is invoked on deserialized object
+     */
+    template<typename SubT>
+    IpcFunc generateIpcCallback(const SubFunc<SubT> &callback_f) const{
+        return ((S*)this) -> template generateIpcCallback<SubT>(callback_f);
+    }
+
+    static std::string Protocol(){
+        return S::Protocol();
     }
 };
 

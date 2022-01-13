@@ -29,57 +29,40 @@ class SerializerFbs : public Serializer<SerializerFbs> {
             (*builder_cpy)->GetSize(), &SerializerFbs::DestroyData, builder_cpy);
     }
 
-    // v1. this worked, but not elegant
-    // note: T is a pointer to const: const RootType*
-    // We can only produce a pointer instead of an object, luckily the msg_in outlives the callback
-    // template<typename T>
-    // inline std::unique_ptr<T> deserialize(const zmq::message_t &msg_in,
-    //                                const std::string &protocol = "") {
-    //     const auto *obj = flatbuffers::GetRoot<typename std::remove_pointer<T>::type>(msg_in.data());
-    //     return std::make_unique<T>(obj);
-    // }
-
-    // v2. T is just the root type
-    template<typename T>
-    inline std::unique_ptr<T> deserialize(const Message &msg_in,
-                                          const std::string &msg_protocol = "") const {
-        if (msg_protocol!=protocol()) return nullptr;
-        const auto *obj = flatbuffers::GetRoot<T>(msg_in.data());
-        // note two things:
-        // 1. the const cast is alright, as we will never modify it
-        // 2. destructor will not actually do anything
-        // update: test it, really unique_ptr? flatbuffers struct seems have no field, but access methods. but is it really safe to delete?
-        return std::unique_ptr<T>(const_cast<T*>(obj));
+    template<typename T = Message>
+    std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
+                                   const std::string &msg_protocol) const {
+        if (msg_protocol!=Protocol()) return nullptr;
+        return msg_in;
     }
 
-    // template<typename SubT, typename PubT = void>
-    // std::unique_ptr<SubT> itcTypeConvert(const void *builder){
-    //     auto builder_p = (const flatbuffers::FlatBufferBuilder*)builder;
-    //     const auto *obj = flatbuffers::GetRoot<SubT>(builder_p->GetBufferPointer());
-    //     // note two things:
-    //     // 1. the const cast is alright, as we will never modify it
-    //     // 2. destructor will not actually do anything
-    //     return std::unique_ptr<SubT>(const_cast<SubT*>(obj));
-    // }
+    // always subscribe with Message, as this is the only way to copy flatbuffers objects
 
-    template<typename SubT, typename PubT = void>
-    std::function<void(const void *)>
-    ipcToItcCallback(const std::function<void(const SubT&)> &callback_f) const {
-        return [&](const void *itc_msg){
-            auto builder_p = (const flatbuffers::FlatBufferBuilder*)itc_msg;
-            const SubT *obj = flatbuffers::GetRoot<SubT>(builder_p->GetBufferPointer());
-            callback_f(*obj);
+    template<typename SubT = Message>
+    ItcFunc generateItcCallback(const SubFunc<SubT> &callback_f) const{
+        return [callback_f](const std::shared_ptr<const void>& msg){
+            auto builder_p = (const flatbuffers::FlatBufferBuilder*)msg.get();
+            // create a dummy message from builder data and handles no destruction
+            auto message = std::make_shared<Message>(
+                    builder_p->GetBufferPointer(), builder_p->GetSize(),
+                    [](void*,void*){printf("destroy\n");} );
+            callback_f(message);
         };
     }
-    //
-    // const void* pubToSubType(const void* pub_obj) const{
-    //     auto *builder_p = (const flatbuffers::FlatBufferBuilder*)pub_obj;
-    //     return ((S*)this)-> template pubToSubType(pub_obj);
-    // }
 
-    static std::string protocol() {
+    template<typename SubT = Message>
+    IpcFunc generateIpcCallback(const SubFunc<SubT> &callback_f) const{
+        return [callback_f](const std::shared_ptr<const void>& msg){
+            callback_f(std::static_pointer_cast<const Message>(msg));
+        };
+    }
+
+
+    static std::string Protocol() {
         return "fbs";
     }
+
+    static bool InMemorySerialization() {return true;}
 
 };
 

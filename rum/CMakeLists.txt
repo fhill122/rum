@@ -32,7 +32,6 @@ add_library(rumcore SHARED
 target_link_libraries(rumcore zmq Threads::Threads)
 
 add_library(cpprum SHARED
-    cpprum/node.h
     cpprum/rum.h
     cpprum/subscriber_handler.h
     cpprum/publisher_handler.h

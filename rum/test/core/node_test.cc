@@ -62,7 +62,7 @@ TEST(NodeTest, CreatePubSub){
 
     auto pub = node.addPublisher(kTopic, kProtocol);
     auto sub = node.addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
-            [](zmq::message_t&){}, [](const void*){}, kProtocol);
+               nullptr, nullptr, nullptr, kProtocol);
     rum::printer.i(__func__, "created");
 
     this_thread::sleep_for(1000ms);

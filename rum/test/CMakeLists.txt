@@ -8,12 +8,10 @@ add_executable(discovery_raw_tet
     discovery_raw.cc)
 target_link_libraries(discovery_raw_tet gtest rumcore)
 
-add_executable(publish_test
-    publish.cc)
-target_link_libraries(publish_test gtest rumcore)
+# extern
 
 add_executable(zmq_test
-    zmq.cc)
+    extern/zmq.cc)
 target_link_libraries(zmq_test gtest rumcore)
 
 # core

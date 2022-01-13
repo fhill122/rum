@@ -7,6 +7,7 @@
 #include "internal/node_base_impl.h"
 #include "internal/subscriber_base_impl.h"
 #include "rum/common/log.h"
+#include "rum/common/common.h"
 
 
 using namespace std;
@@ -18,6 +19,7 @@ void NodeBase::Init(const NodeParam &param) {
     if (inited.test_and_set())
         AssertLog(false, "double init");
     GlobalNode() = unique_ptr<NodeBase>(new NodeBase("__global", param));
+    GlobalNode()->pimpl_->connect(GetMasterInAddr(), GetMasterOutAddr());
 }
 
 std::unique_ptr<NodeBase> &NodeBase::GlobalNode() {
@@ -30,17 +32,20 @@ NodeBase::NodeBase(const string &name, const NodeParam &param):
 
 NodeBase::~NodeBase() =  default;
 
-SubscriberBaseHandler NodeBase::addSubscriber(const std::string &topic,
-                                              const shared_ptr<ThreadPool> &tp,
-                                              size_t queue_size,
-                                              const function<void(zmq::message_t &)> &ipc_cb,
-                                              const function<void(const void *)> &itc_cb,
-                                              const std::string &protocol) {
-    return SubscriberBaseHandler(pimpl_->addSubscriber(topic, tp, queue_size, ipc_cb, itc_cb, protocol));
+SubscriberBaseHandler
+NodeBase::addSubscriber(const std::string &topic,
+                        const shared_ptr<ThreadPool> &tp,
+                        size_t queue_size,
+                        const IpcFunc &ipc_cb,
+                        const ItcFunc &itc_cb,
+                        const DeserFunc &deserialize_f,
+                        const std::string &protocol) {
+    return SubscriberBaseHandler(pimpl_->addSubscriber(topic, tp, queue_size, ipc_cb, itc_cb, deserialize_f, protocol));
 }
 
 void NodeBase::removeSubscriber(SubscriberBaseHandler &subscriber_handler) {
-    pimpl_->removeSubscriber(subscriber_handler.pimpl_);
+    if (subscriber_handler.pimpl_)
+        pimpl_->removeSubscriber(subscriber_handler.pimpl_);
 }
 
 PublisherBaseHandler NodeBase::addPublisher(const std::string &topic,
@@ -49,7 +54,8 @@ PublisherBaseHandler NodeBase::addPublisher(const std::string &topic,
 }
 
 void NodeBase::removePublisher(PublisherBaseHandler &publisher_handler) {
-    pimpl_->removePublisher(publisher_handler.pimpl_);
+    if (publisher_handler.pimpl_)
+        pimpl_->removePublisher(publisher_handler.pimpl_);
 }
 
 }

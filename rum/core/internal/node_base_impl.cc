@@ -32,11 +32,15 @@ NodeBaseImpl::NodeBaseImpl(string name, NodeParam param):
     syncsub_container_ = make_unique<SubContainer>(context_, false);
     sync_pub_ = make_unique<PublisherBaseImpl>(kSyncTopic, "", context_, false);
     auto sync_sub = make_unique<SubscriberBaseImpl>(kSyncTopic, sync_tp_, 1000,
-            [this](zmq::message_t& msg){ syncCb(msg);}, nullptr);
+            [this](const shared_ptr<const void> &msg){
+                syncCb(*static_pointer_cast<const Message>(msg));
+            },
+            nullptr,
+            [](shared_ptr<const Message> &msg, const string&){return move(msg);} );
     syncsub_container_->addSub(move(sync_sub));
 }
 
-void NodeBaseImpl::syncCb(zmq::message_t &msg) {
+void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
     const auto* sync = msg::GetSyncBroadcast(msg.data());
     bool local = sync->node()->pid() == kPid && sync->node()->tcp_addr()->str() == sub_container_->getTcpAddr();
     if (local) return;
@@ -125,11 +129,12 @@ bool NodeBaseImpl::shouldConnectTcp(const msg::SyncBroadcast *sync) {
 
 SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
                             const shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
-                            const function<void(zmq::message_t&)> &ipc_cb,
-                            const function<void(const void *)> &itc_cb,
+                            const IpcFunc &ipc_cb,
+                            const ItcFunc &itc_cb,
+                            const DeserFunc &deserialize_f,
                             const string &protocol) {
     auto sub = make_unique<SubscriberBaseImpl>(
-            topic, tp, queue_size, ipc_cb, itc_cb, protocol);
+            topic, tp, queue_size, ipc_cb, itc_cb, deserialize_f, protocol);
     auto *sub_raw = sub.get();
     bool new_topic = sub_container_->addSub(move(sub));
     if (new_topic){
@@ -143,6 +148,7 @@ SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
 }
 
 void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
+    AssertLog(sub, "");
     bool topic_removed = sub_container_->removeSub(sub);
     if (topic_removed){
         sync_version_.fetch_add(1, std::memory_order_release);
@@ -181,6 +187,7 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
 
 RUM_THREAD_UNSAFE
 void NodeBaseImpl::removePublisher(PublisherBaseImpl *pub) {
+    AssertLog(pub, "");
     MapVecRemove(pubs_, pub->topic_, pub,
                  [pub](const unique_ptr<PublisherBaseImpl> &p){return p.get()==pub;});
 }

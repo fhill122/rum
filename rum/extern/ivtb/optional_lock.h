@@ -1,13 +1,13 @@
-//
-// Created by Ivan B on 2021/3/30.
-//
+/*
+ * Created by Ivan B on 2022/1/12.
+ */
 
-#ifndef RUM_COMMON_LOCKER_HELPER_H_
-#define RUM_COMMON_LOCKER_HELPER_H_
+#ifndef IVTB_THREAD_OPTIONAL_LOCK_H_
+#define IVTB_THREAD_OPTIONAL_LOCK_H_
 
 #include <mutex>
 
-namespace rum{
+namespace ivtb{
 
 template<class T>
 class OptionalLock{
@@ -22,10 +22,9 @@ class OptionalLock{
     ~OptionalLock(){
         if (to_lock_) mu_.unlock();
     }
-
-    // todo ivan. disable copy, move, assignment, etc.
 };
 
 }
 
-#endif //RUM_COMMON_LOCKER_HELPER_H_
+
+#endif //IVTB_THREAD_OPTIONAL_LOCK_H_

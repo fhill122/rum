@@ -12,11 +12,11 @@
 
 namespace rum {
 
-template <class SerializerT, class MsgT>
+template <class MsgT, class SerializerT>
 class PublisherHandler : public PublisherBaseHandler{
   private:
-    Serializer<SerializerT> s_;
   public:
+    inline static Serializer<SerializerT> s_{};
 
   private:
     void internalPub(const std::shared_ptr<const MsgT> &msg){

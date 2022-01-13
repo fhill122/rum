@@ -8,8 +8,10 @@
 namespace rum{
 
 struct NodeParam{
+    // todo ivan. option to start master?
     bool enable_ipc_socket = true;
     bool enable_tcp_socket = true;  // note: despite this setting, sync is always over tcp
+
     inline NodeParam() {};
 
     inline bool check(){

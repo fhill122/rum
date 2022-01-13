@@ -15,7 +15,7 @@ class NodeBase;
 class SubscriberBaseHandler{
   private:
     friend NodeBase;
-    SubscriberBaseImpl* pimpl_;
+    SubscriberBaseImpl* pimpl_ = nullptr;
 
   public:
     explicit SubscriberBaseHandler(SubscriberBaseImpl* pimpl);

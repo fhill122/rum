@@ -146,9 +146,11 @@ bool SubContainer::loop() {
             }
             return true;
         }
+        auto sub_msg = make_shared<SubscriberBaseImpl::Msg>(body, itr->second.size()==1, false,
+                                                            header_fb->protocal()->str());
         for (auto &sub : itr->second){
             // todo ivan. this introduced another delay source
-            sub->enqueue({body, itr->second.size()==1, false});
+            sub->enqueue(sub_msg);
         }
         // todo ivan. if it is a service call reply, should we just notify here?
     }

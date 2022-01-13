@@ -38,8 +38,9 @@ class ImplTest : public ::testing::Test{
         // this_thread::sleep_for(50ms);
         pub_ = node_->addPublisher(kTopic, kProtocol);
         sub_ = node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
-                             [&](zmq::message_t&){ipc_count.fetch_add(1,memory_order_relaxed);},
-                             [&](const void*){itc_count.fetch_add(1,memory_order_relaxed);}, kProtocol);
+                             [&](const shared_ptr<const void> &){ipc_count.fetch_add(1,memory_order_relaxed);},
+                             [&](const shared_ptr<const void> &){itc_count.fetch_add(1,memory_order_relaxed);},
+                             [](shared_ptr<const Message> &msg, const string&){return move(msg);}, kProtocol);
     }
 
     virtual ~ImplTest() {
@@ -56,7 +57,7 @@ class ImplMultiTest : public ::testing::Test{
     unique_ptr<NodeBaseImpl> node_;
     vector<vector<PublisherBaseImpl*>> pubs_;
     vector<vector<SubscriberBaseImpl*>> subs_;
-    shared_ptr<ivtb::ThreadPool> tp = make_shared<ivtb::ThreadPool>(1);
+    shared_ptr<ivtb::ThreadPool> tp = make_shared<ivtb::ThreadPool>(2);
     atomic_int shared_ipc_count{0};
     atomic_int shared_itc_count{0};
 
@@ -78,8 +79,9 @@ class ImplMultiTest : public ::testing::Test{
 
             for(int j=0; j<n_subs; ++j){
                 subs_[i][j] = node_->addSubscriber(topic, tp, 1000,
-                         [&](zmq::message_t&){shared_ipc_count.fetch_add(1, memory_order_relaxed);},
-                         [&](const void*){shared_itc_count.fetch_add(1, memory_order_relaxed);}, kProtocol);
+                        [&](const shared_ptr<const void> &){shared_ipc_count.fetch_add(1, memory_order_relaxed);},
+                        [&](const shared_ptr<const void> &){shared_itc_count.fetch_add(1, memory_order_relaxed);},
+                        [](shared_ptr<const Message> &msg, const string&){return move(msg);}, kProtocol);
             }
         }
     }

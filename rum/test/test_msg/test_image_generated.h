@@ -16,11 +16,15 @@ struct ImageBuilder;
 struct Image FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef ImageBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_W = 4,
-    VT_H = 6,
-    VT_FORMAT = 8,
-    VT_DATA = 10
+    VT_FRAME_ID = 4,
+    VT_W = 6,
+    VT_H = 8,
+    VT_FORMAT = 10,
+    VT_DATA = 12
   };
+  int32_t frame_id() const {
+    return GetField<int32_t>(VT_FRAME_ID, 0);
+  }
   uint32_t w() const {
     return GetField<uint32_t>(VT_W, 0);
   }
@@ -35,6 +39,7 @@ struct Image FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
+           VerifyField<int32_t>(verifier, VT_FRAME_ID) &&
            VerifyField<uint32_t>(verifier, VT_W) &&
            VerifyField<uint32_t>(verifier, VT_H) &&
            VerifyOffset(verifier, VT_FORMAT) &&
@@ -49,6 +54,9 @@ struct ImageBuilder {
   typedef Image Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
+  void add_frame_id(int32_t frame_id) {
+    fbb_.AddElement<int32_t>(Image::VT_FRAME_ID, frame_id, 0);
+  }
   void add_w(uint32_t w) {
     fbb_.AddElement<uint32_t>(Image::VT_W, w, 0);
   }
@@ -75,6 +83,7 @@ struct ImageBuilder {
 
 inline flatbuffers::Offset<Image> CreateImage(
     flatbuffers::FlatBufferBuilder &_fbb,
+    int32_t frame_id = 0,
     uint32_t w = 0,
     uint32_t h = 0,
     flatbuffers::Offset<flatbuffers::String> format = 0,
@@ -84,11 +93,13 @@ inline flatbuffers::Offset<Image> CreateImage(
   builder_.add_format(format);
   builder_.add_h(h);
   builder_.add_w(w);
+  builder_.add_frame_id(frame_id);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<Image> CreateImageDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
+    int32_t frame_id = 0,
     uint32_t w = 0,
     uint32_t h = 0,
     const char *format = nullptr,
@@ -97,6 +108,7 @@ inline flatbuffers::Offset<Image> CreateImageDirect(
   auto data__ = data ? _fbb.CreateVector<int8_t>(*data) : 0;
   return rum::test::msg::CreateImage(
       _fbb,
+      frame_id,
       w,
       h,
       format__,

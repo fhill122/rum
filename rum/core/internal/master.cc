@@ -26,7 +26,12 @@ Master::Master(std::shared_ptr<zmq::context_t> context) :
     sub_container_ = make_unique<SubContainer>(context_);
     auto sync_tp = std::make_shared<ivtb::ThreadPool>(1);
     auto sub = make_unique<SubscriberBaseImpl>(kSyncTopic, move(sync_tp), 0,
-           [this](zmq::message_t& msg){syncForward(msg);}, nullptr);
+            [this](const shared_ptr<const void> &msg){
+                auto message_p = static_pointer_cast<const Message>(msg);
+                syncForward(*const_cast<Message*>(message_p.get()));
+            },
+            nullptr,
+            [](shared_ptr<const Message> &msg, const string&){return move(msg);});
     sub_container_->addSub(move(sub));
 
     pub_ = make_unique<PublisherBaseImpl>(kSyncTopic, "", context_, true);

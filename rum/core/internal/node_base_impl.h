@@ -43,7 +43,7 @@ class NodeBaseImpl {
     const NodeParam param_;
 
   private:
-    void syncCb(zmq::message_t& msg);
+    void syncCb(const zmq::message_t& msg);
     void syncF();
     bool shouldConnectIpc(const msg::SyncBroadcast *sync);
     bool shouldConnectTcp(const msg::SyncBroadcast *sync);
@@ -52,11 +52,13 @@ class NodeBaseImpl {
   public:
     explicit NodeBaseImpl(std::string name = "", NodeParam param = NodeParam());
 
-    SubscriberBaseImpl* addSubscriber(const std::string &topic,
-              const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
-              const std::function<void(zmq::message_t&)> &ipc_cb,
-              const std::function<void(const void *)> &itc_cb,
-              const std::string &protocol = ""); RUM_THREAD_UNSAFE
+    SubscriberBaseImpl*
+    addSubscriber(const std::string &topic,
+                  const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
+                  const IpcFunc &ipc_cb,
+                  const ItcFunc &itc_cb,
+                  const DeserFunc &deserialize_f,
+                  const std::string &protocol = ""); RUM_THREAD_UNSAFE
 
     void removeSubscriber(SubscriberBaseImpl* &sub); RUM_THREAD_UNSAFE
 
