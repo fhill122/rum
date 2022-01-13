@@ -59,12 +59,9 @@ class SerializerFbs : public Serializer<SerializerFbs> {
         };
     }
 
-
     static std::string Protocol() {
         return "fbs";
     }
-
-    static bool InMemorySerialization() {return true;}
 
 };
 

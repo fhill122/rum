@@ -47,11 +47,22 @@ struct SimpleFbNode : public ::testing::Test{
         builder->Finish(img);
         return builder;
     }
+
+     void checkImage(){
+        for (int i = 0; i < received_msgs.size(); ++i) {
+            const test::msg::Image* img = test::msg::GetImage(received_msgs[i]->data());
+            EXPECT_EQ(img->frame_id(), i);
+            EXPECT_EQ(img->w(), 2);
+            EXPECT_EQ(img->h(), 2);
+            EXPECT_EQ(img->data()->Get(0), int8_t(1));
+            EXPECT_EQ(img->data()->Get(1), int8_t(2));
+            EXPECT_EQ(img->data()->Get(2), int8_t(3));
+            EXPECT_EQ(img->data()->Get(3), int8_t(4));
+        }
+    }
 };
 
-
 TEST_F(SimpleFbNode, ItcTest){
-    rum::Init();
     init();
 
     constexpr int kNum = 10;
@@ -62,20 +73,23 @@ TEST_F(SimpleFbNode, ItcTest){
     }
 
     EXPECT_EQ(received_msgs.size(), kNum);
-    for (int i = 0; i < kNum; ++i) {
-        const test::msg::Image* img = test::msg::GetImage(received_msgs[i]->data());
-        EXPECT_EQ(img->frame_id(), i);
-        EXPECT_EQ(img->w(), 2);
-        EXPECT_EQ(img->h(), 2);
-        EXPECT_EQ(img->data()->Get(0), int8_t(1));
-        EXPECT_EQ(img->data()->Get(1), int8_t(2));
-        EXPECT_EQ(img->data()->Get(2), int8_t(3));
-        EXPECT_EQ(img->data()->Get(3), int8_t(4));
-    }
+    checkImage();
 }
 
+TEST_F(SimpleFbNode, IpcTest){
+    init();
+
+    string cmd = argv0 + "_companion " + "SimpleFbNode/IpcTest";
+    system(cmd.c_str());
+    // this_thread::sleep_for(100ms);
+
+    EXPECT_EQ(received_msgs.size(), 10);
+    checkImage();
+}
 
 int main(int argc, char **argv){
+    rum::Init();
+
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);

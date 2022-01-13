@@ -46,7 +46,11 @@ target_link_libraries(ser_fb_test gtest rumcore)
 
 add_executable(cpprum_topic_test
     cpprum/topic_test.cc)
-target_link_libraries(cpprum_topic_test gtest rumcore Glog)
+target_link_libraries(cpprum_topic_test gtest cpprum Glog)
+
+add_executable(cpprum_topic_test_companion
+    cpprum/topic_test_companion.cc)
+target_link_libraries(cpprum_topic_test_companion cpprum)
 
 endif()
 

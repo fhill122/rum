@@ -44,7 +44,6 @@ SubscriberHandler<SubSerializerT> AddSubscriber(
             topic, tp, queue_size,
             SubscriberHandler<SubSerializerT>::s_.generateIpcCallback(callback_f),
             SubscriberHandler<SubSerializerT>::s_.generateItcCallback(callback_f),
-            // nullptr,
             [](std::shared_ptr<const Message> &msg, const std::string& protocol){
                 return SubscriberHandler<SubSerializerT>::s_.template deserialize<MsgT>(msg, protocol);
             },
