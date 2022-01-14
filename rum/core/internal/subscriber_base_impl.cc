@@ -77,7 +77,12 @@ void SubscriberBaseImpl::enqueue(const shared_ptr<Msg> &msg) {
                 shared_ptr<const Message> message_ptr = static_pointer_cast<const Message>(msg->msg);
                 msg->deserialized_obj = deserialize_f_(message_ptr, msg->protocol);
             }
-            ipc_callback_(msg->deserialized_obj);
+
+            if (msg->deserialized_obj){
+                ipc_callback_(msg->deserialized_obj);
+            } else{
+                log.e(TAG, "failed to deserialize");
+            }
         }
     });
 }

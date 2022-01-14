@@ -12,7 +12,7 @@
 namespace rum {
 
 template<typename T>
-using SubFunc = std::function<void(const std::shared_ptr<const T>)>;
+using SubFunc = std::function<void(const std::shared_ptr<const T>&)>;
 // void is actually the type that DeserFunc converts to
 using IpcFunc = std::function<void(const std::shared_ptr<const void>&)>;
 // void is actually the type of scheduled itc object
@@ -27,7 +27,6 @@ class Serializer {
 
   public:
 
-    // todo ivan. check if return null in rum
     /**
      * Serialization function
      * @tparam T Object type
@@ -41,7 +40,6 @@ class Serializer {
         return ((S*)this)-> template serialize<T>(t);
     }
 
-    // todo ivan. check if return null in rum
     /**
      * Deserialization function
      * @tparam T Deserialized object type

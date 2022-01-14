@@ -11,9 +11,14 @@ namespace rum {
 PublisherBaseHandler::PublisherBaseHandler(PublisherBaseImpl* pimpl): pimpl_(pimpl){}
 
 
-bool PublisherBaseHandler::isConnected() {
+bool PublisherBaseHandler::isConnected() const{
     return pimpl_->isConnected();
 }
+
+const std::string &PublisherBaseHandler::getTopic() const {
+    return pimpl_->topic_;
+}
+
 
 bool PublisherBaseHandler::pub(Message &body) {
     return pimpl_->publishIpc(body);

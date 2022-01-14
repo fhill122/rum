@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define TAG (topic_+"_Pub")
+#define TAG (topic_+"_pub")
 
 namespace rum {
 

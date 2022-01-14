@@ -18,7 +18,7 @@ namespace rum {
 
 class SubscriberBaseImpl;
 
-// todo ivan. abandon different master address
+// note: we assume all connect to same master here
 struct ItcManager {
 
     std::string domain;

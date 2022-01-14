@@ -22,8 +22,12 @@ class PublisherBaseHandler {
   public:
     explicit PublisherBaseHandler(PublisherBaseImpl* pimpl);
 
-    bool isConnected();
+    bool isConnected() const;
+
+    const std::string & getTopic() const;
+
     bool pub(Message &message);
+
     bool scheduleItc(const std::shared_ptr<const void> &msg);
 };
 

@@ -7,6 +7,7 @@
 
 #include <rum/core/publisher_base_handler.h>
 #include <rum/serialization/serializer.h>
+#include <rum/common/log.h>
 #include <memory>
 #include <string>
 
@@ -26,7 +27,11 @@ class PublisherHandler : public PublisherBaseHandler{
         // pub ipc
         if (isConnected()){
             auto message = s_.serialize(msg);
-            if(message) PublisherBaseHandler::pub(*message);
+            if(message){
+                PublisherBaseHandler::pub(*message);
+            } else{
+                log.e(getTopic(), "Failed to serialize");
+            }
         }
     }
 
