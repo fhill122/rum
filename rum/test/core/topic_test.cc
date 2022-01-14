@@ -183,6 +183,8 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
     EXPECT_EQ(shared_ipc_count.load(), 100*2*kNSubs*kNTopics*kNPubs);
 }
 
+// todo ivan. test publish connection judge
+
 int main(int argc, char **argv){
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();

@@ -19,25 +19,39 @@ class SerializerNative : public Serializer<SerializerNative>{
 
   public:
     template <class T>
-    std::unique_ptr<zmq::message_t>
+    std::unique_ptr<Message>
     serialize(const std::shared_ptr<const T> &object) const {
         size_t size = AutoGetSerializationSize(*object);
-        auto msg = std::make_unique<zmq::message_t>(size);
+        auto msg = std::make_unique<Message>(size);
         AutoSerialize((char*)msg->data(), *object);
         return msg;
     }
 
     template<typename T>
-    std::unique_ptr<T> deserialize(const zmq::message_t &msg_in,
+    std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
                                    const std::string &msg_protocol="") const{
-        if (msg_protocol!=protocol()) return nullptr;
+        if (msg_protocol!=Protocol()) return nullptr;
         // T must have default constructor
         auto t = std::make_unique<T>();
-        AutoDeserialize((char*)msg_in.data(), *t);
+        AutoDeserialize((char*)msg_in->data(), *t);
         return t;
     }
 
-    inline static std::string protocol(){
+    template<typename SubT>
+    ItcFunc generateItcCallback(const SubFunc<SubT> &callback_f) const{
+        return [callback_f](const std::shared_ptr<const void>& msg){
+            callback_f(std::static_pointer_cast<const SubT>(msg));
+        };
+    }
+
+    template<typename SubT>
+    IpcFunc generateIpcCallback(const SubFunc<SubT> &callback_f) const{
+        return [callback_f](const std::shared_ptr<const void>& msg){
+            callback_f(std::static_pointer_cast<const SubT>(msg));
+        };
+    }
+
+    inline static std::string Protocol(){
         return "native";
     }
 };

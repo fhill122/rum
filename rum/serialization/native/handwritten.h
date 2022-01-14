@@ -7,7 +7,6 @@
 
 #include <cstddef>
 
-// todo ivan. to test all these
 namespace rum{
 
 struct HandwrittenSerialization{

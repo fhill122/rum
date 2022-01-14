@@ -6,8 +6,13 @@
 
 #include <rum/cpprum/rum.h>
 #include <rum/common/log.h>
+
 #include <rum/serialization/flatbuffers/serializer_fbs.h>
 #include "../test_msg/test_image_generated.h"
+
+#include <rum/serialization/native/common_types.h>
+#include <rum/serialization/native/serializer_native.h>
+#include "../test_msg/test_native_message.h"
 
 using namespace std;
 using namespace rum;
@@ -85,6 +90,88 @@ TEST_F(SimpleFbNode, IpcTest){
 
     EXPECT_EQ(received_msgs.size(), 10);
     checkImage();
+}
+
+struct SimpleNativeNode : public ::testing::Test{
+  public:
+    static constexpr char kTopic[] = "TestTopic";
+    int id_pool = 0;
+    PublisherHandler<Predefinded, SerializerNative> pub;
+    SubscriberHandler<SerializerNative> sub;
+    vector<shared_ptr<const Predefinded>> received_msgs;
+    vector<shared_ptr<const Predefinded>> published_msgs;
+
+    SimpleNativeNode() {}
+    ~SimpleNativeNode(){
+        rum::RemovePublisher(pub);
+        rum::RemoveSubscriber(sub);
+    }
+
+    void init(){
+        pub = rum::AddPublisher<Predefinded, SerializerNative>(kTopic);
+        sub = rum::AddSubscriber<Predefinded, SerializerNative>(kTopic,
+                 [this](const shared_ptr<const Predefinded> &msg){ subCallback(msg);});
+    }
+
+    void subCallback(const shared_ptr<const Predefinded> &msg){
+        received_msgs.push_back(msg);
+    }
+
+    unique_ptr<Predefinded> createObject(){
+        auto obj = make_unique<Predefinded>();
+        obj->name = "lalala";
+        obj->id = id_pool++;
+        obj->xyz = {1.5, 6.66, 3.14159};
+        obj->data = {'a','b', 'c'};
+        obj->trivial_data = make_unique<TrivialData>();
+        obj->trivial_data->l = TrivialData::Level::b;
+        obj->trivial_data->x = 5;
+        obj->trivial_data->y = 6;
+        obj->data[0] = 'y';
+        obj->data[1] = 'u';
+        obj->data[2] = 'v';
+
+        return obj;
+    }
+
+    void checkObject(){
+        for (int i = 0; i < received_msgs.size(); ++i) {
+            EXPECT_EQ(*published_msgs[i], *received_msgs[i]);
+        }
+    }
+};
+
+TEST_F(SimpleNativeNode, ItcTest){
+    init();
+
+    constexpr int kNum = 10;
+
+    for (int i = 0; i < kNum; ++i) {
+        shared_ptr<const Predefinded> obj = createObject();
+        pub.pub(obj);
+        published_msgs.push_back(move(obj));
+        this_thread::sleep_for(10ms);
+    }
+
+    EXPECT_EQ(received_msgs.size(), kNum);
+    checkObject();
+}
+
+// todo ivan. doing here. failed if running all tests
+TEST_F(SimpleNativeNode, IpcTest){
+    init();
+
+    constexpr int kNum = 10;
+    for (int i = 0; i < kNum; ++i) {
+        published_msgs.push_back(createObject());
+    }
+
+    string cmd = argv0 + "_companion " + "SimpleNativeNode/IpcTest";
+    system(cmd.c_str());
+    // this_thread::sleep_for(100ms);
+
+    EXPECT_EQ(received_msgs.size(), 10);
+    checkObject();
 }
 
 int main(int argc, char **argv){
