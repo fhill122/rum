@@ -149,6 +149,9 @@ SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
 
 void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
     AssertLog(sub, "");
+    // remove pointer from itc first
+    ItcManager::GlobalManager().removeSub(sub);
+    // remove sub from container
     bool topic_removed = sub_container_->removeSub(sub);
     if (topic_removed){
         sync_version_.fetch_add(1, std::memory_order_release);
@@ -156,7 +159,6 @@ void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
         sync_task_ = make_shared<Scheduler::Task>(*sync_task_);
         sync_scheduler_.schedule(sync_task_);
     }
-    ItcManager::GlobalManager().removeSub(sub);
     sub = nullptr;
 }
 
