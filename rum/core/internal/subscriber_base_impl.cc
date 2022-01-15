@@ -10,11 +10,12 @@
 
 #include <utility>
 
+#define TAG (topic_+"_sub")
+
 using namespace std;
 
 namespace rum{
 
-#define TAG topic_+"_sub"
 
 SubscriberBaseImpl::Msg::Msg(const shared_ptr<const void> &msg, bool own, bool itc, string protocol)
         : msg(msg), own(own), itc(itc), protocol(move(protocol)) {}
@@ -93,3 +94,5 @@ void SubscriberBaseImpl::setDestrCallback(const function<void()> &destr_callback
 }
 
 }
+
+#undef TAG

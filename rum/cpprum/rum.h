@@ -12,8 +12,8 @@
 
 namespace rum {
 
-static inline void Init(const NodeParam &param = NodeParam()) {
-    NodeBase::Init(param);
+static inline bool Init(const NodeParam &param = NodeParam()) {
+    return NodeBase::Init(param);
 }
 
 template<class MsgT, class SubSerializerT>

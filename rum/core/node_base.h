@@ -27,7 +27,7 @@ class NodeBase {
     explicit NodeBase(const std::string &name = "", const NodeParam &param = NodeParam());
 
   public:
-    static void Init(const NodeParam &param = NodeParam());
+    static bool Init(const NodeParam &param = NodeParam());
 
     static std::unique_ptr<NodeBase>& GlobalNode();
 

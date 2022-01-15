@@ -168,6 +168,8 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
     auto pub = make_unique<PublisherBaseImpl>(topic, protocol, context_);
     auto *pub_raw =  pub.get();
 
+    // connect in single thread sync_tp_ to avoid locking for connect operation.
+    // it is ok to capture reference since we will wait the future.
     auto connect_future = sync_tp_->enqueue([&]{
         auto itr = RemoteManager::GlobalManager().topic_book.find(topic);
         if (itr!=RemoteManager::GlobalManager().topic_book.end()){
@@ -190,8 +192,12 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
 RUM_THREAD_UNSAFE
 void NodeBaseImpl::removePublisher(PublisherBaseImpl *pub) {
     AssertLog(pub, "");
-    MapVecRemove(pubs_, pub->topic_, pub,
-                 [pub](const unique_ptr<PublisherBaseImpl> &p){return p.get()==pub;});
+    auto remove_future = sync_tp_->enqueue([pub, this]{
+        MapVecRemove(pubs_, pub->topic_, pub,
+                     [pub](const unique_ptr<PublisherBaseImpl> &p){return p.get()==pub;});
+
+    });
+    remove_future.wait();
 }
 
 void NodeBaseImpl::shutdown() {

@@ -10,9 +10,9 @@
 #include <rum/common/zmq_helper.h>
 #include "itc_manager.h"
 
-using namespace std;
-
 #define TAG (topic_+"_pub")
+
+using namespace std;
 
 namespace rum {
 
@@ -143,3 +143,5 @@ void PublisherBaseImpl::setDestrCallback(const function<void()> &destr_callback)
 }
 
 }
+
+#undef TAG

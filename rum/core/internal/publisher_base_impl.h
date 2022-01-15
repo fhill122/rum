@@ -23,10 +23,8 @@ class PublisherBaseImpl {
     std::mutex zmq_mu_;
     zmq::message_t msg_header_;
 
+    // the reason conn_list_ is not guarded by zmq_mu_ is to speed up frequent sync connection check
     std::unordered_set<std::string> conn_list_;
-    // std::vector<std::weak_ptr<SubscriberBaseImpl>> itc_subs_; RUM_LOCK_BY(itc_mu_)
-    // std::vector<SubscriberBaseImpl*> itc_subs_; RUM_LOCK_BY(itc_mu_)
-    // std::mutex itc_mu_;
 
     std::function<void()> destr_callback_; RUM_LOCK_BY(destr_mu_)
     std::mutex destr_mu_;

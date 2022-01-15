@@ -157,7 +157,6 @@ TEST_F(SimpleNativeNode, ItcTest){
     checkObject();
 }
 
-// todo ivan. doing here. failed if running all tests
 TEST_F(SimpleNativeNode, IpcTest){
     init();
 

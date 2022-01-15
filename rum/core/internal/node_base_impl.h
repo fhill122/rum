@@ -58,15 +58,16 @@ class NodeBaseImpl {
                   const IpcFunc &ipc_cb,
                   const ItcFunc &itc_cb,
                   const DeserFunc &deserialize_f,
-                  const std::string &protocol = ""); RUM_THREAD_UNSAFE
+                  const std::string &protocol = ""); RUM_THREAD_SAFE
 
-    void removeSubscriber(SubscriberBaseImpl* &sub); RUM_THREAD_UNSAFE
+    void removeSubscriber(SubscriberBaseImpl* &sub); RUM_THREAD_SAFE
 
-    PublisherBaseImpl * addPublisher(const std::string &topic, const std::string &protocol); RUM_THREAD_UNSAFE
+    PublisherBaseImpl * addPublisher(const std::string &topic, const std::string &protocol); RUM_THREAD_SAFE
 
-    void removePublisher(PublisherBaseImpl *pub); RUM_THREAD_UNSAFE
+    void removePublisher(PublisherBaseImpl *pub); RUM_THREAD_SAFE
 
-    void shutdown(); RUM_THREAD_UNSAFE
+    // todo ivan. should we ever call it? especially for rumassembly modules
+    void shutdown();
 
     /**
      * connect to master. call this only once

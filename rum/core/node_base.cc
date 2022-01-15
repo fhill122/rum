@@ -14,12 +14,14 @@ using namespace std;
 
 namespace rum{
 
-void NodeBase::Init(const NodeParam &param) {
-    static std::atomic_flag inited = ATOMIC_FLAG_INIT;
-    if (inited.test_and_set())
-        AssertLog(false, "double init");
+bool NodeBase::Init(const NodeParam &param) {
+    static std::mutex mtx;
+    lock_guard lock(mtx);
+    if (GlobalNode())
+        return false;
     GlobalNode() = unique_ptr<NodeBase>(new NodeBase("__global", param));
     GlobalNode()->pimpl_->connect(GetMasterInAddr(), GetMasterOutAddr());
+    return true;
 }
 
 std::unique_ptr<NodeBase> &NodeBase::GlobalNode() {

@@ -40,3 +40,4 @@ set_target_properties(cpprum PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(cpprum rumcore)
 
 add_subdirectory(test)
+add_subdirectory(extra/assembly)
