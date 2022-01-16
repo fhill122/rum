@@ -11,8 +11,10 @@ using namespace rum;
 //  so disconnection monitoring and periodic binding trial will fail.
 //  ** Seems there's an exception: binding to 127.0.0.1 is always prompt
 TEST(MasterTest, QuickCompete){
+    this_thread::sleep_for(10ms);
+    ASSERT_TRUE(rum::Master::DbgGetGlobalMaster()->active.load(memory_order_relaxed));
     // this destroys global master
-    rum::Master::DbgGetGlobalMaster();
+    rum::Master::DbgGetGlobalMaster().reset();
     this_thread::sleep_for(10ms);
 
     Log::I("QuickCompete", "create master 1");

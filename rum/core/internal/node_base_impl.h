@@ -51,6 +51,7 @@ class NodeBaseImpl {
 
   public:
     explicit NodeBaseImpl(std::string name = "", NodeParam param = NodeParam());
+    virtual ~NodeBaseImpl();
 
     SubscriberBaseImpl*
     addSubscriber(const std::string &topic,

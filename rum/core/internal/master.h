@@ -39,7 +39,7 @@ class Master {
     Master& operator=(Master &&) = delete;
 
     // debugs
-    static std::unique_ptr<Master> DbgGetGlobalMaster(){return move(master_);}
+    static std::unique_ptr<Master>& DbgGetGlobalMaster(){return master_;}
     std::atomic<bool> active{false};
 };
 

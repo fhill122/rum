@@ -135,7 +135,6 @@ bool SubContainer::loop() {
     else if (header_fb->type() == msg::MsgType::MsgType_Message){
         log.v(TAG, "received a msg of topic %s", header_fb->name()->c_str());
         // todo ivan. consider dispatch with daemon thread / multi thread
-        // todo ivan. consider: if subs_ is fixed, this lock could be avoided
         lock_guard<mutex> lock(subs_mu_);
         auto itr = subs_.find(header_fb->name()->str());
         if (itr == subs_.end()){
@@ -149,7 +148,6 @@ bool SubContainer::loop() {
         auto sub_msg = make_shared<SubscriberBaseImpl::Msg>(body, itr->second.size()==1, false,
                                                             header_fb->protocal()->str());
         for (auto &sub : itr->second){
-            // todo ivan. this introduced another delay source
             sub->enqueue(sub_msg);
         }
         // todo ivan. if it is a service call reply, should we just notify here?

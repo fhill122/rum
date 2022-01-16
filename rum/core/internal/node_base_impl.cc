@@ -40,6 +40,10 @@ NodeBaseImpl::NodeBaseImpl(string name, NodeParam param):
     syncsub_container_->addSub(move(sync_sub));
 }
 
+NodeBaseImpl::~NodeBaseImpl() {
+    shutdown();
+}
+
 void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
     const auto* sync = msg::GetSyncBroadcast(msg.data());
     bool local = sync->node()->pid() == kPid && sync->node()->tcp_addr()->str() == sub_container_->getTcpAddr();
@@ -201,6 +205,10 @@ void NodeBaseImpl::removePublisher(PublisherBaseImpl *pub) {
 }
 
 void NodeBaseImpl::shutdown() {
+    if (is_down_.load(std::memory_order_acquire))
+        return;
+
+    log.w(__func__, __func__ );
     // todo ivan. broadcast its death
     // shutdown sub_container
     syncsub_container_->stop();

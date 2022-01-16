@@ -30,6 +30,7 @@ using namespace rum;
  * - seg fault during connection/shutdown, no idea the cause
  * - system limit: too many open files
  *
+ * Note: we no longer support multiple nodes in same process
  */
 TEST(NodeTest, ManyNodes){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::i);
