@@ -17,6 +17,15 @@ constexpr int kMasterTrialPeriod = 100;  // ms
 constexpr int kNodeHbPeriod = 200; //ms
 // constexpr int kNodeHbPeriod = 0; //ms
 
+/* node removal */
+// longer than this is considered offline
+constexpr int kNodeOfflineCriteria = 2*kNodeHbPeriod;
+// offline checking period
+constexpr int kNodeOfflineCheckPeriod = 500;  // ms
+// node is removed if checked offline this number of times,
+// this instead of a single timeout to ensure node will not be deleted in case of system change, system suspend, etc.
+constexpr int kNodeOfflineCheckCounts = 2;
+
 constexpr char kTopicReserve[] = "__";
 constexpr char kSyncTopic[] = "__sync";
 

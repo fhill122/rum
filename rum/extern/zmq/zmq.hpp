@@ -78,6 +78,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <thread>
+
 #ifdef ZMQ_CPP11
 #include <array>
 #include <chrono>
@@ -1192,9 +1194,15 @@ public:
 
     void connect(const char *addr_)
     {
+        using namespace std;
         int rc = zmq_connect(_handle, addr_);
         if (rc != 0)
             throw error_t();
+        // note by ivan. ugly workaround for many issues.
+        //  some thing like: https://github.com/zeromq/libzmq/issues/1583 in mac,
+        //  test cases that have to wait many seconds to got connected,
+        //  ...
+        std::this_thread::sleep_for(50ms);
     }
 
     void disconnect(std::string const &addr) { disconnect(addr.c_str()); }

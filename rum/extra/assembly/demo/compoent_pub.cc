@@ -13,8 +13,10 @@ class DemoComponentPub : rum::Component{
     int main(int argc, char **argv) override {
         rum::log.setLogLevel(rum::Log::Destination::Std, rum::Log::Level::w);
         rum::Log::I("pub", "pub start here");
+
         rum::Init();
         auto pub = rum::AddPublisher<Point3d, rum::SerializerNative>("Point");
+
         while(true){
             unique_ptr<Point3d> point = make_unique<Point3d>();
             point->x = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX/5));

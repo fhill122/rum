@@ -11,6 +11,7 @@
 #include <unordered_set>
 
 #include "rum/common/def.h"
+#include "rum/extern/ivtb/stopwatch.h"
 #include "../msg/rum_sync_generated.h"
 
 namespace rum{
@@ -26,10 +27,11 @@ struct RemoteManager {
 
     struct NodeInfo{
         std::string sync_data;
-        std::string str_id;
-        // double last_sync;
+        // std::string str_id;
+        int offline_check_count = 0;
+        ivtb::Stopwatch last_observation;
 
-        NodeInfo();
+        // NodeInfo();
         NodeInfo(const std::string &sync_fb);
 
         bool isDisconnected();
@@ -39,6 +41,11 @@ struct RemoteManager {
         };
 
         [[nodiscard]] static std::string GetStrId(const void *sync_fb_p);
+
+        // refresh offline check statistics
+        void observe();
+
+        bool shouldRemove();
     };
 
     unsigned long sync_count = 0;
@@ -48,10 +55,11 @@ struct RemoteManager {
     std::unordered_map<std::string, std::vector<NodeInfo*>> topic_book;
 
     static RemoteManager& GlobalManager();
+
     NodeUpdate wholeSyncUpdate(const void *fb_data, size_t size); RUM_THREAD_UNSAFE
 
-    // todo ivan. implement node removal.
-    //  and the removal should be called in the same thread as update() to prevent sync
+    // this should be called in the same thread as update() to prevent sync
+    std::vector<std::string> checkAndRemove(); RUM_THREAD_UNSAFE
 };
 
 }

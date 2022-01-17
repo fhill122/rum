@@ -142,6 +142,8 @@ string BindRandTcp(zmq::socket_t &socket, int trial) {
         try {
             addr = GenTcpAddr();
             socket.bind(addr);
+            // ugly workaround
+            this_thread::sleep_for(50ms);
             if (i > 0) {
                 log.d(__func__ , "retry success. bind to " + addr);
             }
@@ -160,6 +162,8 @@ std::string BindIpc(zmq::socket_t &socket) {
     string addr = GenIpcAddr();
     try{
         socket.bind(addr);
+        // ugly workaround
+        this_thread::sleep_for(50ms);
     }
     catch (...){
         log.d(__func__, "failed to bind ipc " + addr);

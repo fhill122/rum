@@ -6,6 +6,9 @@
 
 #include "rum/common/log.h"
 #include "rum/common/misc.h"
+#include "rum/common/common.h"
+
+#define TAG "RemoteManager"
 
 using namespace std;
 
@@ -21,10 +24,22 @@ std::string RemoteManager::NodeInfo::GetStrId(const void *sync_fb_p) {
 }
 
 RemoteManager::NodeInfo::NodeInfo(const string &sync_fb) : sync_data(sync_fb) {
-    str_id = GetStrId(msg::GetSyncBroadcast(sync_fb.data()));
+    // str_id = GetStrId(msg::GetSyncBroadcast(sync_fb.data()));
 }
 
-RemoteManager::NodeInfo::NodeInfo() = default;
+// RemoteManager::NodeInfo::NodeInfo() = default;
+
+void RemoteManager::NodeInfo::observe() {
+    last_observation.start();
+    offline_check_count = 0;
+}
+
+bool RemoteManager::NodeInfo::shouldRemove() {
+    if (last_observation.passedMs() < kNodeOfflineCriteria) return false;
+    bool res =  (++offline_check_count) >= kNodeOfflineCheckCounts;
+    // if (res) log.e(TAG, "remove a node");
+    return res;
+}
 
 RemoteManager &RemoteManager::GlobalManager() {
     static RemoteManager manager;
@@ -50,16 +65,17 @@ RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, si
         }
     } else {
         node_p = itr->second.get();
+        node_p->observe();
         const auto *old_sync = itr->second->getSyncFb();
         if (old_sync->version() == sync->version()) return update;
 
         set<std::string> old_subs;
         set<std::string> new_subs;
 
-        for (auto sub: *old_sync->subscribers()) {
+        for (auto sub: *(old_sync->subscribers())) {
             old_subs.insert(sub->topic()->str());
         }
-        for (auto sub: *sync->subscribers()) {
+        for (auto sub: *(sync->subscribers())) {
             new_subs.insert(sub->topic()->str());
         }
 
@@ -89,4 +105,43 @@ RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, si
     return update;
 }
 
+std::vector<std::string> RemoteManager::checkAndRemove() {
+    vector<string> removed_topics;
+
+    // get the removal list
+    // <string id, NodeInfo>
+    vector<pair<string, std::unique_ptr<NodeInfo>>> to_remove;
+    for (auto &id_node_pair : remote_book){
+        auto &node = id_node_pair.second;
+        if (node->shouldRemove())
+            to_remove.emplace_back(id_node_pair.first, move(node));
+    }
+
+    // remove from topic book
+    for (auto &id_node_pair : to_remove){
+        const auto *sync = id_node_pair.second->getSyncFb();
+        auto *node_p = id_node_pair.second.get();
+        for (auto *sub : *sync->subscribers()){
+            MapVecRemove(topic_book, sub->topic()->str(), node_p,
+                         [node_p](NodeInfo *n){return n==node_p;} );
+        }
+    }
+
+    // fill return. note order matters, sync_data is moved here
+    vector<string> removed_node_sync;
+    removed_node_sync.reserve(to_remove.size());
+    for (auto &id_node_pair : to_remove){
+        removed_node_sync.push_back(move(id_node_pair.second->sync_data));
+    }
+
+    // remove from remote book
+    for (auto &id_node_pair : to_remove) {
+        remote_book.erase(id_node_pair.first);
+    }
+
+    return removed_node_sync;
 }
+
+}
+
+#undef TAG

@@ -43,6 +43,7 @@ class Scheduler{
                 action(std::move(action)), period(period), delay(delay), repeat(true), name(std::move(name)){}
 
         // virtual ~Task() = default;
+        // note: copy revert cancelled to false
         inline Task(const Task &rhs): name(rhs.name), repeat(rhs.repeat), period(rhs.period), delay(rhs.delay),
                 action(rhs.action){}
         inline Task(Task&& rhs): name(std::move(rhs.name)), repeat(rhs.repeat), period(rhs.period),
@@ -113,7 +114,7 @@ class Scheduler{
     std::unordered_set<std::shared_ptr<Task>> tasks_;
     std::mutex tasks_mu_;
     std::unique_ptr<std::thread> schedule_t_;
-    std::unique_ptr<ThreadPool> task_tp_;
+    std::shared_ptr<ThreadPool> task_tp_;
     std::condition_variable cv_;
     bool stop_ = false;
   public:
@@ -127,6 +128,7 @@ class Scheduler{
 
   public:
     inline explicit Scheduler(int task_threads = 0);
+    inline explicit Scheduler(std::shared_ptr<ThreadPool> thread_pool);
     inline ~Scheduler();
 
     /**
@@ -161,7 +163,11 @@ class Scheduler{
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Scheduler::Scheduler(int task_threads) {
-    if (task_threads>0) task_tp_ = std::make_unique<ThreadPool>(task_threads, "SchedulerTp");
+    if (task_threads>0) task_tp_ = std::make_shared<ThreadPool>(task_threads, "SchedulerTp");
+    schedule_t_ = std::make_unique<std::thread>([this]{loop();});
+}
+
+Scheduler::Scheduler(std::shared_ptr<ThreadPool> thread_pool): task_tp_(std::move(thread_pool)) {
     schedule_t_ = std::make_unique<std::thread>([this]{loop();});
 }
 

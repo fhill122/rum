@@ -46,8 +46,8 @@ class PublisherBaseImpl {
     bool bindTcpRaw(const std::string &addr= "");
     bool bindIpcRaw();
 
-    bool connect(const std::string &addr);
-    bool disconnect(const std::string &addr);
+    bool connect(const std::string &addr); RUM_THREAD_UNSAFE
+    bool disconnect(const std::string &addr); RUM_THREAD_UNSAFE
     inline std::mutex& getPubMutex(){return zmq_mu_;}
     bool isConnected();
 

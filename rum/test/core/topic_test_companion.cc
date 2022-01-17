@@ -16,7 +16,8 @@ class ImplTest{
     static constexpr char kTopic[] = "TestTopic";
     static constexpr char kProtocol[] = "protocol";
     unique_ptr<NodeBaseImpl> node_;
-    PublisherBaseImpl *pub_;
+    PublisherBaseImpl *pub_ = nullptr;
+    SubscriberBaseImpl *sub_ = nullptr;
 
   private:
 
@@ -28,6 +29,13 @@ class ImplTest{
         node_->connect(GetMasterInAddr(), GetMasterOutAddr());
         this_thread::sleep_for(50ms);
         pub_ = node_->addPublisher(kTopic, kProtocol);
+        sub_ = node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
+                                    [](const shared_ptr<const void> &){},
+                                    [](const shared_ptr<const void> &){},
+                                    [](shared_ptr<const Message> &msg, const string&){return move(msg);},
+                                    kProtocol);
+        // have to be greater than heartbeat
+        this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
     }
 
 };
@@ -55,6 +63,9 @@ class ImplMultiTest{
                 pubs_[i][j] = node_->addPublisher(topic, kProtocol);
             }
         }
+
+        // have to be greater than heartbeat
+        this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
     }
 };
 
@@ -62,8 +73,6 @@ void IpcBasic(){
     Log::I(__func__, "start");
     ImplTest impl_test;
     impl_test.init();
-    // have to be greater than heartbeat
-    this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
     for (int i = 0; i < 10; ++i) {
         impl_test.pub_->publishIpc(zmq::message_t(1));
     }
@@ -77,13 +86,22 @@ void TcpBasic(){
     NodeParam param;
     param.enable_ipc_socket = false;
     impl_test.init(param);
-    // have to be greater than heartbeat
-    this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
     for (int i = 0; i < 10; ++i) {
         impl_test.pub_->publishIpc(zmq::message_t(1));
     }
     this_thread::sleep_for(10ms);
     Log::I(__func__, "end");
+}
+
+void RemoteCrash(){
+    Log::I(__func__, "start");
+    ImplTest impl_test;
+    impl_test.init();
+
+    this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
+
+    Log::I(__func__, "crash!");
+    abort();
 }
 
 void MultiIpc(){
@@ -93,16 +111,14 @@ void MultiIpc(){
     Log::I(__func__, "start");
     ImplMultiTest test;
     test.init(kNTopics,kNPubs);
-    // have to be greater than heartbeat
-    this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
     for (int i=0; i<100; ++i){
         for (int j=0; j<kNTopics; ++j) {
             for (int k=0; k<kNPubs; ++k)
                 test.pubs_[j][k]->publishIpc(zmq::message_t(1));
         }
-        this_thread::sleep_for(100us);
+        this_thread::sleep_for(1ms);
     }
-    this_thread::sleep_for(10ms);
+    this_thread::sleep_for(20ms);
     Log::I(__func__, "end");
 }
 
@@ -115,28 +131,31 @@ void MultiTcp(){
     NodeParam param;
     param.enable_ipc_socket = false;
     test.init(kNTopics,kNPubs, move(param));
-    // have to be greater than heartbeat
-    this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
     for (int i=0; i<100; ++i){
         for (int j=0; j<kNTopics; ++j) {
             for (int k=0; k<kNPubs; ++k)
                 test.pubs_[j][k]->publishIpc(zmq::message_t(1));
         }
-        this_thread::sleep_for(100us);
+        this_thread::sleep_for(1ms);
     }
-    this_thread::sleep_for(10ms);
+    this_thread::sleep_for(20ms);
     Log::I(__func__, "end");
 }
 
 int main(int argc, char* argv[]){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
+
     AssertLog(argc>1, "input command");
     string cmd = argv[1];
+    Log::I(__func__, "invoked with " + cmd );
     if (cmd == "IpcBasic"){
         IpcBasic();
     }
     else if (cmd == "TcpBasic"){
         TcpBasic();
+    }
+    else if (cmd == "RemoteCrash"){
+        RemoteCrash();
     }
     else if (cmd == "MultiIpc"){
         MultiIpc();

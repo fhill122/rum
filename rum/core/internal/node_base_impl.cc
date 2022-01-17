@@ -4,14 +4,13 @@
 
 #include "node_base_impl.h"
 
-#include <rum/common/zmq_helper.h>
-#include <rum/common/log.h>
-#include <rum/common/common.h>
+#include "rum/common/zmq_helper.h"
+#include "rum/common/log.h"
+#include "rum/common/common.h"
 #include "rum/common/misc.h"
-#include <rum/core/msg/rum_sync_generated.h>
-#include <rum/extern/ivtb/stopwatch.h>
+#include "rum/core/msg/rum_sync_generated.h"
+#include "rum/extern/ivtb/stopwatch.h"
 #include "rum/core/msg/util.h"
-#include "remote_manager.h"
 #include "itc_manager.h"
 
 using namespace std;
@@ -20,10 +19,6 @@ using namespace ivtb;
 namespace rum{
 
 atomic_int NodeBaseImpl::id_pool_{1};
-
-// string addrConcatenate(const string &addr1, const string &addr2){
-//     return addr1 + ";;;" + addr2;
-// }
 
 NodeBaseImpl::NodeBaseImpl(string name, NodeParam param):
         name_(move(name)), param_(move(param)), context_(shared_context()),
@@ -44,6 +39,40 @@ NodeBaseImpl::~NodeBaseImpl() {
     shutdown();
 }
 
+void NodeBaseImpl::updatePubConnection(const msg::NodeId *remote_node, RemoteManager::NodeUpdate &update) {
+    auto loopOp =
+            [this, remote_node](const vector<string> &topics,
+                const function<void(const vector<unique_ptr<PublisherBaseImpl>>&,
+                                    const msg::NodeId*)> &f){
+                for (const auto &topic : topics){
+                    auto itr = pubs_.find(topic);
+                    if (itr==pubs_.end()) continue;
+                    f(itr->second, remote_node);
+                }
+            };
+
+    if (shouldConnectIpc(remote_node)){
+        loopOp(update.topics_new,
+               [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
+                   for (auto &pub : pubs) pub->connect(node->ipc_addr()->str());
+               });
+        loopOp(update.topics_removed,
+               [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
+                   for (auto &pub : pubs) pub->disconnect(node->ipc_addr()->str());
+               });
+    }
+    else if (shouldConnectTcp(remote_node)){
+        loopOp(update.topics_new,
+               [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
+                   for (auto &pub : pubs) pub->connect(node->tcp_addr()->str());
+               });
+        loopOp(update.topics_removed,
+               [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
+                   for (auto &pub : pubs) pub->disconnect(node->tcp_addr()->str());
+               });
+    }
+}
+
 void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
     const auto* sync = msg::GetSyncBroadcast(msg.data());
     bool local = sync->node()->pid() == kPid && sync->node()->tcp_addr()->str() == sub_container_->getTcpAddr();
@@ -54,41 +83,10 @@ void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
 
     auto update = RemoteManager::GlobalManager().wholeSyncUpdate(msg.data(), msg.size());
 
-    // connect/disconnect publishers
-    auto loopOp =
-            [&](const vector<string> &topics,
-                const function<void(const vector<unique_ptr<PublisherBaseImpl>>&,
-                const msg::NodeId*)> &f){
-        for (const auto &topic : topics){
-            auto itr = pubs_.find(topic);
-            if (itr==pubs_.end()) continue;
-            f(itr->second, sync->node());
-        }
-    };
-
-    if (shouldConnectIpc(sync)){
-        loopOp(update.topics_new,
-            [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
-            for (auto &pub : pubs) pub->connect(node->ipc_addr()->str());
-        });
-        loopOp(update.topics_removed,
-               [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
-                   for (auto &pub : pubs) pub->disconnect(node->ipc_addr()->str());
-        });
-    }
-    else if (shouldConnectTcp(sync)){
-        loopOp(update.topics_new,
-             [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
-                for (auto &pub : pubs) pub->connect(node->tcp_addr()->str());
-        });
-        loopOp(update.topics_removed,
-               [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
-                   for (auto &pub : pubs) pub->disconnect(node->tcp_addr()->str());
-        });
-    }
+    updatePubConnection(sync->node(), update);
 }
 
-void NodeBaseImpl::syncF(){
+void NodeBaseImpl::syncFunc(){
     flatbuffers::FlatBufferBuilder builder;
     flatbuffers::Offset<msg::SyncBroadcast> sync_fb;
     auto node_id = msg::CreateNodeIdDirect(builder, nid_, kPid,
@@ -96,9 +94,10 @@ void NodeBaseImpl::syncF(){
                                            sub_container_->getIpcAddr().c_str(),
                                            name_.c_str());
 
-    // auto fb_msg = msg::CreateSubscriberInfo()
+    // broadcast self sync info
     vector<flatbuffers::Offset<msg::SubscriberInfo>> subs_vect;
     {
+        // do we need this lock? seems only reading could take place in parallel
         lock_guard<mutex> lock(sub_container_->subs_mu_);
         subs_vect.reserve(sub_container_->subs_.size());
         for (const auto &t : sub_container_->subs_){
@@ -109,24 +108,36 @@ void NodeBaseImpl::syncF(){
     sync_fb = msg::CreateSyncBroadcastDirect(builder, node_id,
                             sync_version_.load(std::memory_order_acquire),
                               msg::SyncType_Whole, &subs_vect, nullptr);
-
     builder.Finish(sync_fb);
     sync_pub_->publishIpc(zmq::message_t(builder.GetBufferPointer(), builder.GetSize()));
     log.d(__func__, "broadcast sync once: %s",
           ToString(msg::GetSyncBroadcast(builder.GetBufferPointer())).c_str());
 }
 
-bool NodeBaseImpl::shouldConnectIpc(const msg::SyncBroadcast *sync) {
+void NodeBaseImpl::checkRemote() {
+    auto removal = RemoteManager::GlobalManager().checkAndRemove();
+    for (const auto &str : removal){
+        const auto* sync = msg::GetSyncBroadcast(str.data());
+        RemoteManager::NodeUpdate update;
+        update.topics_removed.reserve(sync->subscribers()->size());
+        for (const auto *sub: *sync->subscribers()) {
+            update.topics_removed.push_back(sub->topic()->str());
+        }
+        updatePubConnection(sync->node(), update);
+    }
+}
+
+bool NodeBaseImpl::shouldConnectIpc(const msg::NodeId *sync) const {
     if (param_.enable_ipc_socket &&
-        sync->node()->ipc_addr()->size()>0 &&
-        IpFromTcp(sync->node()->tcp_addr()->str()) == kIpStr)
+        sync->ipc_addr()->size()>0 &&
+        IpFromTcp(sync->tcp_addr()->str()) == kIpStr)
         return true;
     return false;
 }
 
-bool NodeBaseImpl::shouldConnectTcp(const msg::SyncBroadcast *sync) {
+bool NodeBaseImpl::shouldConnectTcp(const msg::NodeId *sync) const {
     if (param_.enable_tcp_socket &&
-        sync->node()->tcp_addr()->size()>0)
+        sync->tcp_addr()->size()>0)
         return true;
     return false;
 }
@@ -166,7 +177,7 @@ void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
     sub = nullptr;
 }
 
-RUM_THREAD_UNSAFE
+
 PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
                                                const string &protocol) {
     auto pub = make_unique<PublisherBaseImpl>(topic, protocol, context_);
@@ -179,9 +190,9 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
         if (itr!=RemoteManager::GlobalManager().topic_book.end()){
             for (const auto *node_info : itr->second){
                 const auto* sync_fb = node_info->getSyncFb();
-                if (shouldConnectIpc(sync_fb)){
+                if (shouldConnectIpc(sync_fb->node())){
                     pub->connect(sync_fb->node()->ipc_addr()->str());
-                }else if (shouldConnectTcp(sync_fb)){
+                }else if (shouldConnectTcp(sync_fb->node())){
                     pub->connect(sync_fb->node()->tcp_addr()->str());
                 }
             }
@@ -193,7 +204,7 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
     return pub_raw;
 }
 
-RUM_THREAD_UNSAFE
+
 void NodeBaseImpl::removePublisher(PublisherBaseImpl *pub) {
     AssertLog(pub, "");
     auto remove_future = sync_tp_->enqueue([pub, this]{
@@ -210,6 +221,8 @@ void NodeBaseImpl::shutdown() {
 
     log.w(__func__, __func__ );
     // todo ivan. broadcast its death
+    std::this_thread::sleep_for(100ms);
+
     // shutdown sub_container
     syncsub_container_->stop();
     sub_container_->stop();
@@ -219,6 +232,7 @@ void NodeBaseImpl::shutdown() {
     // remove itc subs
     auto subs = sub_container_->getSubs();
     ItcManager::GlobalManager().batchRemove(subs);
+    // note: subs in sub_container are not removed here
 
     is_down_.store(true, memory_order_release);
     sync_scheduler_.stop();
@@ -244,8 +258,9 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
     }
     sub_container_->start();
 
-    sync_task_ = make_shared<Scheduler::Task>([this]{syncF();}, kNodeHbPeriod*1e-3, 0);
+    sync_task_ = make_shared<Scheduler::Task>([this]{ syncFunc();}, kNodeHbPeriod*1e-3, 0);
     sync_scheduler_.schedule(sync_task_);
+    sync_scheduler_.schedule( Scheduler::Task{ [this]{ checkRemote();}, kNodeOfflineCheckPeriod*1e-3, 0});
 }
 
 }

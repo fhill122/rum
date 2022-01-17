@@ -8,8 +8,9 @@
 #include <rum/common/log.h>
 #include <rum/core/internal/node_base_impl.h>
 #include <rum/common/common.h>
+#include <rum/core/internal/itc_manager.h>
 
-#include "rum/core/internal/itc_manager.h"
+#include "../test_utils/process_utils.h"
 
 using namespace std;
 using namespace rum;
@@ -22,7 +23,7 @@ class ImplTest : public ::testing::Test{
     static constexpr char kTopic[] = "TestTopic";
     static constexpr char kProtocol[] = "protocol";
     unique_ptr<NodeBaseImpl> node_;
-    PublisherBaseImpl *pub_;
+    PublisherBaseImpl *pub_ = nullptr;
     SubscriberBaseImpl *sub_ = nullptr;
     atomic_int ipc_count{0};
     atomic_int itc_count{0};
@@ -131,13 +132,16 @@ TEST_F(ImplTest, TcpIcpMismatched) {
     EXPECT_EQ(ipc_count.load(), 0);
 }
 
+// when launch "all test", got err:
+//  - Resource temporarily unavailable
+//  - count mismatch
 TEST_F(ImplTest, ItcIpcTcpBasic) {
     init();
 
     string cmd1 = argv0 + "_companion " + "IpcBasic";
     string cmd2 = argv0 + "_companion " + "TcpBasic";
-    auto t1 = thread([cmd1]{system(cmd1.c_str());});
-    auto t2 = thread([cmd2]{system(cmd2.c_str());});
+    auto t1 = thread([cmd1]{ LaunchProcess(cmd1);});
+    auto t2 = thread([cmd2]{ LaunchProcess(cmd2);});
 
     int itc_n = kNodeHbPeriod+150;
     for (int i = 0; i < itc_n; ++i) {
@@ -153,6 +157,23 @@ TEST_F(ImplTest, ItcIpcTcpBasic) {
     EXPECT_EQ(ipc_count.load(), 20);
 }
 
+// occasionally fail if run all tests
+TEST_F(ImplTest, RemoteCrash){
+    init();
+    string cmd = argv0 + "_companion " + "RemoteCrash";
+    thread companion_t([&]{system(cmd.c_str());});
+
+    this_thread::sleep_for((kNodeHbPeriod+150)*1ms);
+    EXPECT_TRUE(pub_->isConnected());
+
+    companion_t.join();
+
+    // sleep until the node is removed
+    this_thread::sleep_for((kNodeOfflineCriteria+kNodeOfflineCheckCounts*kNodeOfflineCheckPeriod)*1ms);
+    EXPECT_FALSE(pub_->isConnected());
+}
+
+// when launch all test, got err: Resource temporarily unavailable
 TEST_F(ImplMultiTest, MultiItcIpcTcp){
     constexpr int kNTopics = 10;
     constexpr int kNSubs = 5;
@@ -162,8 +183,8 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
 
     string cmd1 = argv0 + "_companion " + "MultiIpc";
     string cmd2 = argv0 + "_companion " + "MultiTcp";
-    auto t1 = thread([cmd1]{system(cmd1.c_str());});
-    auto t2 = thread([cmd2]{system(cmd2.c_str());});
+    auto t1 = thread([cmd1]{LaunchProcess(cmd1);});
+    auto t2 = thread([cmd2]{LaunchProcess(cmd2);});
 
     int itc_n = kNodeHbPeriod+150;
     for (int i = 0; i < itc_n; ++i) {
@@ -175,15 +196,18 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
         }
         this_thread::sleep_for(1ms);
     }
-    this_thread::sleep_for(50ms);
 
     t1.join();
     t2.join();
+    this_thread::sleep_for(10ms);
     EXPECT_EQ(shared_itc_count.load(), itc_n*kNSubs*kNTopics*kNPubs);
     EXPECT_EQ(shared_ipc_count.load(), 100*2*kNSubs*kNTopics*kNPubs);
 }
 
-// todo ivan. test publish connection judge
+
+// todo ivan. test:
+//  - publish connection judge
+//  - topic removal/add
 
 int main(int argc, char **argv){
     google::InitGoogleLogging(argv[0]);

@@ -14,6 +14,7 @@ class DemoComponentSub : rum::Component{
     int main(int argc, char **argv) override {
         rum::log.setLogLevel(rum::Log::Destination::Std, rum::Log::Level::w);
         rum::Log::I("sub", "sub start here");
+
         bool res = rum::Init();
         rum::AddSubscriber<Point3d, rum::SerializerNative>("Point", DemoComponentSub::SubCallback);
         while(true) this_thread::sleep_for(1s);
