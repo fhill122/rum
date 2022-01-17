@@ -63,11 +63,13 @@ RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, si
             new_subs.insert(sub->topic()->str());
         }
 
+        update.topics_new.resize(new_subs.size());
         auto it_added = set_difference(new_subs.begin(), new_subs.end(),
                                        old_subs.begin(), old_subs.end(),
                                        update.topics_new.begin());
         update.topics_new.resize(it_added - update.topics_new.begin());
 
+        update.topics_removed.resize(old_subs.size());
         auto it_removed = set_difference(old_subs.begin(), old_subs.end(),
                                          new_subs.begin(), new_subs.end(),
                                          update.topics_removed.begin());
