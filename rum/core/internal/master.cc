@@ -79,7 +79,7 @@ Master::Master(std::shared_ptr<zmq::context_t> context) :
     monitor_socket_ = make_unique<zmq::socket_t>(*context_, ZMQ_PUB);
     // int reconnect_period = 500;
     // monitor_socket_->setsockopt(ZMQ_RECONNECT_IVL, &reconnect_period, sizeof(reconnect_period));
-    monitor_socket_->connect(GetMasterInAddr());
+    ZmqSyncedOp(*monitor_socket_, ZmqOpType::Connect, GetMasterInAddr());
     monitor_ = make_unique<ZmqMonitor>(*monitor_socket_);
     monitor_->start([this](const zmq_event_t &event, const char *address){
         switch (event.event) {

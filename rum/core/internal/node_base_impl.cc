@@ -200,6 +200,7 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
         MapVecAdd(pubs_, topic, move(pub));
     });
     connect_future.wait();
+    this_thread::sleep_for(50ms);
 
     return pub_raw;
 }
@@ -244,8 +245,8 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
 
     bool res1 = sync_pub_->connect(addr_in);
     bool res2 = syncsub_container_->connectRaw(addr_out);
+
     AssertLog(res1&&res2, "failed to connect to " + addr_in + " and " + addr_out);
-    domain_ = {addr_in, addr_out};
     syncsub_container_->start();
 
     if (param_.enable_tcp_socket){
@@ -256,6 +257,7 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
         bool ipc_binding = sub_container_->bindIpcRaw();
         AssertLog(ipc_binding, "");
     }
+    this_thread::sleep_for(50ms);
     sub_container_->start();
 
     sync_task_ = make_shared<Scheduler::Task>([this]{ syncFunc();}, kNodeHbPeriod*1e-3, 0);

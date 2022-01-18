@@ -20,7 +20,6 @@ class NodeBaseImpl {
 
   private:
     const std::string name_;
-    std::pair<std::string, std::string> domain_;
     const int nid_;
 
     std::unique_ptr<SubContainer> sub_container_;

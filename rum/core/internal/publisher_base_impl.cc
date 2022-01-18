@@ -54,7 +54,7 @@ bool PublisherBaseImpl::connect(const string &addr) {
     if (conn_list_.find(addr)==conn_list_.end()) {
         try {
             lock_guard<mutex> lock(zmq_mu_);
-            zmq_publisher_->connect(addr);
+            ZmqSyncedOp(*zmq_publisher_, ZmqOpType::Connect, addr);
             log.v(TAG, "connected to %s", addr.c_str());
         }
         catch (...) {
@@ -72,7 +72,7 @@ bool PublisherBaseImpl::disconnect(const string &addr) {
     if (itr != conn_list_.end()) {
         try {
             lock_guard<mutex> lock(zmq_mu_);
-            zmq_publisher_->disconnect(addr);
+            ZmqSyncedOp(*zmq_publisher_, ZmqOpType::Disconnect, addr);
         }
         catch (...) {
             log.e(TAG, "err disconnect %s", addr.c_str());

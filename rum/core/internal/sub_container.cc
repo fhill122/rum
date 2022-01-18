@@ -46,7 +46,7 @@ bool SubContainer::bindIpcRaw(){
 
 bool SubContainer::connectRaw(const std::string &addr){
     try{
-        zmq_subscriber_->connect(addr);
+        ZmqSyncedOp(*zmq_subscriber_, ZmqOpType::Connect, addr);
     }
     catch (...){
         log.e(TAG, "err connect to %s", addr.c_str());

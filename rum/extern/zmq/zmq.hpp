@@ -1202,7 +1202,7 @@ public:
         //  some thing like: https://github.com/zeromq/libzmq/issues/1583 in mac,
         //  test cases that have to wait many seconds to got connected,
         //  ...
-        std::this_thread::sleep_for(50ms);
+        // std::this_thread::sleep_for(50ms);
     }
 
     void disconnect(std::string const &addr) { disconnect(addr.c_str()); }

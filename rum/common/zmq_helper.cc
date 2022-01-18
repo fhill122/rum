@@ -14,9 +14,10 @@
 #include <netdb.h>
 #include <random>
 
-#include <rum/common/common.h>
-#include <rum/common/log.h>
-#include <rum/extern/ivtb/thread_util.h>
+#include "rum/common/common.h"
+#include "rum/common/log.h"
+#include "rum/extern/ivtb/thread_util.h"
+#include "rum/extern/ivtb/stopwatch.h"
 
 using namespace std;
 
@@ -141,9 +142,7 @@ string BindRandTcp(zmq::socket_t &socket, int trial) {
         string addr;
         try {
             addr = GenTcpAddr();
-            socket.bind(addr);
-            // ugly workaround
-            this_thread::sleep_for(50ms);
+            ZmqSyncedOp(socket, ZmqOpType::Bind, addr);
             if (i > 0) {
                 log.d(__func__ , "retry success. bind to " + addr);
             }
@@ -161,9 +160,7 @@ string BindRandTcp(zmq::socket_t &socket, int trial) {
 std::string BindIpc(zmq::socket_t &socket) {
     string addr = GenIpcAddr();
     try{
-        socket.bind(addr);
-        // ugly workaround
-        this_thread::sleep_for(50ms);
+        ZmqSyncedOp(socket, ZmqOpType::Bind, addr);
     }
     catch (...){
         log.d(__func__, "failed to bind ipc " + addr);
@@ -192,6 +189,37 @@ std::string BindTcp(zmq::socket_t &socket, const string &addr) {
     }
 }
 
+// note by ivan. ugly workaround for many issues.
+//  some thing like: https://github.com/zeromq/libzmq/issues/1583 in mac,
+//  ...
+void ZmqSyncedOp(zmq::socket_t &socket, ZmqOpType op, const string &addr, unsigned int delay_ms) {
+    static mutex mu;
+    // static ivtb::Stopwatch stopwatch;
+
+    lock_guard lock(mu);
+    // sleep to apart from last op at least 50ms
+    // this_thread::sleep_for( min(50.0, max(0.0, 50-stopwatch.passedMs())) *1ms);
+    switch (op) {
+        case ZmqOpType::Bind:
+            socket.bind(addr);
+            break;
+        case ZmqOpType::Unbind:
+            socket.unbind(addr);
+            break;
+        case ZmqOpType::Connect:
+            socket.connect(addr);
+            break;
+        case ZmqOpType::Disconnect:
+            socket.disconnect(addr);
+            break;
+        case ZmqOpType::Close:
+            socket.close();
+            break;
+    }
+    // stopwatch.start();
+    if (delay_ms>0) this_thread::sleep_for(delay_ms*1ms);
+}
+
 ZmqMonitor::ZmqMonitor(zmq::socket_t &socket, int events) {
     auto addr = GenItcAddr();
     int rc = zmq_socket_monitor(socket.handle(), addr.c_str(), events);
@@ -200,7 +228,7 @@ ZmqMonitor::ZmqMonitor(zmq::socket_t &socket, int events) {
 
     _socket = socket;
     _monitor_socket = zmq::socket_t(socket.ctxptr, ZMQ_PAIR);
-    _monitor_socket.connect(addr.c_str());
+    ZmqSyncedOp(_monitor_socket, ZmqOpType::Connect, addr);
 }
 
 ZmqMonitor::~ZmqMonitor() {

@@ -55,6 +55,11 @@ std::string BindIpc(zmq::socket_t &socket);
 
 std::string BindTcp(zmq::socket_t &socket, const std::string &addr = "");
 
+enum class ZmqOpType{
+    Bind, Unbind, Connect, Disconnect, Close
+};
+
+void ZmqSyncedOp(zmq::socket_t &socket, ZmqOpType op, const std::string &addr, unsigned int delay_ms = 0);
 
 // modified from cppzmq, not really my style
 class ZmqMonitor{
