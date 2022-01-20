@@ -33,8 +33,8 @@ target_link_libraries(rumcore zmq Threads::Threads)
 
 add_library(cpprum SHARED
     cpprum/rum.h
-    cpprum/subscriber_handler.h
-    cpprum/publisher_handler.h
+    cpprum/subscriber.h
+    cpprum/publisher.h
 )
 set_target_properties(cpprum PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(cpprum rumcore)

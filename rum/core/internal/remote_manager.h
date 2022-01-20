@@ -34,8 +34,6 @@ struct RemoteManager {
         // NodeInfo();
         NodeInfo(const std::string &sync_fb);
 
-        bool isDisconnected();
-
         [[nodiscard]] inline const msg::SyncBroadcast* getSyncFb() const {
             return msg::GetSyncBroadcast(sync_data.data());
         };
@@ -53,8 +51,6 @@ struct RemoteManager {
     std::unordered_map<std::string, std::unique_ptr<NodeInfo>> remote_book;
     // <topic, NodeInfo>
     std::unordered_map<std::string, std::vector<NodeInfo*>> topic_book;
-
-    static RemoteManager& GlobalManager();
 
     NodeUpdate wholeSyncUpdate(const void *fb_data, size_t size); RUM_THREAD_UNSAFE
 

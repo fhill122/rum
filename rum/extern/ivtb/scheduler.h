@@ -5,7 +5,9 @@
 //    - frontend / threadpool execution
 //    - monotonic clock
 //
-// Note: this implementation does not aim to provide high time precision.
+// Note:
+//   - this implementation does not aim to provide highest time precision.
+//   - c++17 or above
 //
 // todo ivan.
 //    - support repeat n times
@@ -25,7 +27,7 @@
 
 namespace ivtb{
 
-class Scheduler{
+class Scheduler : public std::enable_shared_from_this<ivtb::Scheduler>{
   public:
     struct Task{
         const std::string name;  // not used for now
@@ -115,6 +117,7 @@ class Scheduler{
     std::mutex tasks_mu_;
     std::unique_ptr<std::thread> schedule_t_;
     std::shared_ptr<ThreadPool> task_tp_;
+    const bool shared_tp_;
     std::condition_variable cv_;
     bool stop_ = false;
   public:
@@ -128,7 +131,10 @@ class Scheduler{
 
   public:
     inline explicit Scheduler(int task_threads = 0);
+    // note: for shared thread_pool version, we can not guarantee all tasks are removed from the pool
+    // after stop or destruction, we do assure tasks will not actually run if the scheduler is destroyed
     inline explicit Scheduler(std::shared_ptr<ThreadPool> thread_pool);
+    inline explicit Scheduler(std::unique_ptr<ThreadPool> thread_pool);
     inline ~Scheduler();
 
     /**
@@ -162,12 +168,16 @@ class Scheduler{
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Scheduler::Scheduler(int task_threads) {
+Scheduler::Scheduler(int task_threads): shared_tp_(false) {
     if (task_threads>0) task_tp_ = std::make_shared<ThreadPool>(task_threads, "SchedulerTp");
     schedule_t_ = std::make_unique<std::thread>([this]{loop();});
 }
 
-Scheduler::Scheduler(std::shared_ptr<ThreadPool> thread_pool): task_tp_(std::move(thread_pool)) {
+Scheduler::Scheduler(std::shared_ptr<ThreadPool> thread_pool): task_tp_(std::move(thread_pool)), shared_tp_(true) {
+    schedule_t_ = std::make_unique<std::thread>([this]{loop();});
+}
+
+Scheduler::Scheduler(std::unique_ptr<ThreadPool> thread_pool): task_tp_(std::move(thread_pool)), shared_tp_(false) {
     schedule_t_ = std::make_unique<std::thread>([this]{loop();});
 }
 
@@ -234,6 +244,7 @@ void Scheduler::executeTask(ScheduledTask &&task) {
         std::lock_guard<std::mutex> lock(tasks_mu_);
         if (!task.task->repeat) tasks_.erase(task.task);
         if (task.task->cancelled) return;
+        if (stop_) return;
     }
 
     auto last_run_t = task.last_run_t;
@@ -309,8 +320,11 @@ void Scheduler::loop() {
             }
 
             if (task_tp_){
-                // todo ivan. can we do multi threading? schedule next task is safe?
-                task_tp_->enqueue([this, task = std::move(task)]() mutable {executeTask(std::move(task));});
+                task_tp_->enqueue([weak_this = weak_from_this(), task = std::move(task)]() mutable {
+                    if (auto shared_this = weak_this.lock()){
+                        shared_this->executeTask(std::move(task));
+                    }
+                });
             }
             else{
                 executeTask(std::move(task));
@@ -327,7 +341,8 @@ void Scheduler::stop() {
         cv_.notify_one();
     }
     schedule_t_->join();
-    if(task_tp_) task_tp_->stopAndClear();
+    // todo ivan. task could still be executed in background if shared_tp_. can we wait? keep future?
+    if(!shared_tp_ && task_tp_) task_tp_->stopAndClear();
 }
 
 }

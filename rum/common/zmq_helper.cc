@@ -190,9 +190,10 @@ std::string BindTcp(zmq::socket_t &socket, const string &addr) {
 }
 
 // note by ivan. ugly workaround for many issues.
+//  Resource temporarily unavailable
 //  some thing like: https://github.com/zeromq/libzmq/issues/1583 in mac,
 //  ...
-void ZmqSyncedOp(zmq::socket_t &socket, ZmqOpType op, const string &addr, unsigned int delay_ms) {
+void ZmqSyncedOp(zmq::socket_t &socket, ZmqOpType op, const string &addr) {
     static mutex mu;
     // static ivtb::Stopwatch stopwatch;
 
@@ -217,7 +218,7 @@ void ZmqSyncedOp(zmq::socket_t &socket, ZmqOpType op, const string &addr, unsign
             break;
     }
     // stopwatch.start();
-    if (delay_ms>0) this_thread::sleep_for(delay_ms*1ms);
+    if (zmq_force_delay>0) this_thread::sleep_for(zmq_force_delay*1ms);
 }
 
 ZmqMonitor::ZmqMonitor(zmq::socket_t &socket, int events) {

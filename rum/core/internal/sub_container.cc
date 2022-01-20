@@ -190,6 +190,11 @@ bool SubContainer::removeSub(SubscriberBaseImpl *sub) {
          [sub](const unique_ptr<SubscriberBaseImpl> &obj){return sub==obj.get();});
 }
 
+void SubContainer::clearSubs() {
+    lock_guard<mutex> lock(subs_mu_);
+    subs_.clear();
+}
+
 std::vector<SubscriberBaseImpl *> SubContainer::getSubs() {
     lock_guard<mutex> lock(subs_mu_);
     vector<SubscriberBaseImpl *> out;

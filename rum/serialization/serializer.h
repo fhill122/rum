@@ -18,9 +18,10 @@ using IpcFunc = std::function<void(const std::shared_ptr<const void>&)>;
 // void is actually the type of scheduled itc object
 using ItcFunc = std::function<void(const std::shared_ptr<const void>&)>;
 using DeserFunc = std::function<
-        std::shared_ptr<const void> (std::shared_ptr<const Message>&, const std::string&)
-                >;
-
+        std::shared_ptr<const void> (std::shared_ptr<const Message>&, const std::string&) >;
+template<typename T>
+using SerFunc = std::function<
+        std::unique_ptr<Message> (const std::shared_ptr<const T>&) >;
 
 template<typename S>
 class Serializer {

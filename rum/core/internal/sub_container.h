@@ -84,6 +84,8 @@ class SubContainer {
 
     std::vector<SubscriberBaseImpl*> getSubs();
 
+    void clearSubs();
+
     [[nodiscard]] inline const std::string &getTcpAddr() const { return tcp_addr_;}
     [[nodiscard]] inline const std::string &getIpcAddr() const { return ipc_addr_;}
 };

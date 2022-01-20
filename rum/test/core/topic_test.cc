@@ -1,4 +1,7 @@
 //
+// Note: without introducing large amount of delay many test would fail if net interface is not 127.0.0.1,
+// especially when running all test.
+//
 // Created by Ivan B on 2021/8/7.
 //
 
@@ -9,11 +12,13 @@
 #include <rum/core/internal/node_base_impl.h>
 #include <rum/common/common.h>
 #include <rum/core/internal/itc_manager.h>
+#include <rum/extern/ivtb/stopwatch.h>
 
 #include "../test_utils/process_utils.h"
 
 using namespace std;
 using namespace rum;
+using namespace ivtb;
 
 string argv0;
 
@@ -132,9 +137,6 @@ TEST_F(ImplTest, TcpIcpMismatched) {
     EXPECT_EQ(ipc_count.load(), 0);
 }
 
-// when launch "all test", got err:
-//  - Resource temporarily unavailable
-//  - count mismatch
 TEST_F(ImplTest, ItcIpcTcpBasic) {
     init();
 
@@ -157,23 +159,55 @@ TEST_F(ImplTest, ItcIpcTcpBasic) {
     EXPECT_EQ(ipc_count.load(), 20);
 }
 
-// occasionally fail if run all tests
+// just easy to fail when run all, but pass when run single test or on 127.0.0.1 or sleep long enough
 TEST_F(ImplTest, RemoteCrash){
     init();
     string cmd = argv0 + "_companion " + "RemoteCrash";
     thread companion_t([&]{system(cmd.c_str());});
 
-    this_thread::sleep_for((kNodeHbPeriod+150)*1ms);
+    Stopwatch stopwatch;
+    while(stopwatch.passedMs() < 5*(kNodeHbPeriod+50)){
+        if (pub_->isConnected()){
+            break;
+        }
+        std::this_thread::sleep_for(5ms);
+    }
     EXPECT_TRUE(pub_->isConnected());
 
     companion_t.join();
 
     // sleep until the node is removed
-    this_thread::sleep_for((kNodeOfflineCriteria+kNodeOfflineCheckCounts*kNodeOfflineCheckPeriod)*1ms);
+    stopwatch.start();
+    while(stopwatch.passedMs() < kNodeOfflineCriteria+kNodeOfflineCheckCounts*kNodeOfflineCheckPeriod){
+        if (!pub_->isConnected()){
+            break;
+        }
+        std::this_thread::sleep_for(5ms);
+    }
+    EXPECT_FALSE(pub_->isConnected());
+}
+
+// just easy to fail when run all, but pass when run single test or on 127.0.0.1 or sleep long enough
+TEST_F(ImplTest, RemoteSubRemoval){
+    init();
+    string cmd = argv0 + "_companion " + "RemoteSubRemoval";
+    thread companion_t([&]{system(cmd.c_str());});
+
+    Stopwatch stopwatch;
+    while(stopwatch.passedMs() < 4*(kNodeHbPeriod+50)){
+        if (pub_->isConnected()){
+            break;
+        }
+        std::this_thread::sleep_for(5ms);
+    }
+    EXPECT_TRUE(pub_->isConnected());
+
+    companion_t.join();
     EXPECT_FALSE(pub_->isConnected());
 }
 
 // when launch all test, got err: Resource temporarily unavailable
+// just easy to fail when run all, but pass when run single test or on 127.0.0.1 or sleep long enough
 TEST_F(ImplMultiTest, MultiItcIpcTcp){
     constexpr int kNTopics = 10;
     constexpr int kNSubs = 5;
@@ -205,15 +239,12 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
 }
 
 
-// todo ivan. test:
-//  - publish connection judge
-//  - topic removal/add
-
 int main(int argc, char **argv){
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::w);
     argv0 = argv[0];
+    // zmq_force_delay = 50;
 
     ::testing::InitGoogleTest(&argc, argv);
     int res =  RUN_ALL_TESTS();

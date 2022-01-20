@@ -14,10 +14,6 @@ using namespace std;
 
 namespace rum {
 
-bool RemoteManager::NodeInfo::isDisconnected() {
-    return false;
-}
-
 std::string RemoteManager::NodeInfo::GetStrId(const void *sync_fb_p) {
     const auto *sync = (msg::SyncBroadcast *) sync_fb_p;
     return to_string(sync->node()->pid()) + "::" + sync->node()->tcp_addr()->str();
@@ -26,8 +22,6 @@ std::string RemoteManager::NodeInfo::GetStrId(const void *sync_fb_p) {
 RemoteManager::NodeInfo::NodeInfo(const string &sync_fb) : sync_data(sync_fb) {
     // str_id = GetStrId(msg::GetSyncBroadcast(sync_fb.data()));
 }
-
-// RemoteManager::NodeInfo::NodeInfo() = default;
 
 void RemoteManager::NodeInfo::observe() {
     last_observation.start();
@@ -39,11 +33,6 @@ bool RemoteManager::NodeInfo::shouldRemove() {
     bool res =  (++offline_check_count) >= kNodeOfflineCheckCounts;
     // if (res) log.e(TAG, "remove a node");
     return res;
-}
-
-RemoteManager &RemoteManager::GlobalManager() {
-    static RemoteManager manager;
-    return manager;
 }
 
 RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, size_t size) {

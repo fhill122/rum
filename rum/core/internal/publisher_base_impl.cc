@@ -28,7 +28,7 @@ rum::PublisherBaseImpl::PublisherBaseImpl(string topic, std::string protocol,
     auto header_fb = msg::CreateMsgHeaderDirect(header_builder,
             msg::MsgType_Message, topic_.c_str(), protocol_.c_str());
     header_builder.Finish(header_fb);
-    // todo ivan. can we do this with null deleter? how to avoid memory leak once publisher is destroyed?
+    // todo ivan. we can do this with null deleter. but how to avoid memory leak once publisher is destroyed? linger time force to zero?
     msg_header_.rebuild(header_builder.GetBufferPointer(), header_builder.GetSize());
 }
 
@@ -113,7 +113,7 @@ bool PublisherBaseImpl::publishIpc(zmq::message_t &body){
 }
 
 bool PublisherBaseImpl::scheduleItc(const shared_ptr<const void> &msg) {
-    return ItcManager::GlobalManager().scheduleItc(topic_, msg);
+    return ItcManager::GlobalManager()->scheduleItc(topic_, msg);
 }
 
 int PublisherBaseImpl::send(zmq::socket_t &socket, zmq::message_t &message, bool wait) {

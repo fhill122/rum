@@ -7,8 +7,8 @@
 
 #include "rum/core/node_base.h"
 #include "rum/serialization/flatbuffers/serializer_fbs.h"
-#include "publisher_handler.h"
-#include "subscriber_handler.h"
+#include "publisher.h"
+#include "subscriber.h"
 
 namespace rum {
 
@@ -17,54 +17,43 @@ static inline bool Init(const NodeParam &param = NodeParam()) {
 }
 
 template<class MsgT, class SubSerializerT>
-SubscriberHandler<SubSerializerT> AddSubscriber(
+[[nodiscard]] std::unique_ptr<Subscriber> CreateSubscriber(
         const std::string &topic,
         const SubFunc<MsgT> &callback_f,
         size_t queue_size = 1000,
         const std::shared_ptr<ThreadPool> &tp = std::make_shared<ThreadPool>(1));
 
 template <class MsgT, class PubSerializerT>
-PublisherHandler<MsgT, PubSerializerT> AddPublisher(const std::string &topic);
-
-template<class MsgT, class SubSerializerT>
-void RemoveSubscriber(SubscriberHandler<SubSerializerT> &sub_handler);
-
-template <class MsgT, class PubSerializerT>
-void RemovePublisher(PublisherHandler<PubSerializerT, MsgT> &pub_handler);
+[[nodiscard]] std::unique_ptr<Publisher<MsgT>> CreatePublisher(const std::string &topic);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<class MsgT, class SubSerializerT>
-SubscriberHandler<SubSerializerT> AddSubscriber(
+Subscriber::UniquePtr CreateSubscriber(
         const std::string &topic, const SubFunc<MsgT> &callback_f,
         size_t queue_size, const std::shared_ptr<ThreadPool> &tp) {
+    Serializer<SubSerializerT> serializer;
 
-    return SubscriberHandler<SubSerializerT>(
+    return std::make_unique<Subscriber>(
         NodeBase::GlobalNode()->addSubscriber(
             topic, tp, queue_size,
-            SubscriberHandler<SubSerializerT>::s_.generateIpcCallback(callback_f),
-            SubscriberHandler<SubSerializerT>::s_.generateItcCallback(callback_f),
-            [](std::shared_ptr<const Message> &msg, const std::string& protocol){
-                return SubscriberHandler<SubSerializerT>::s_.template deserialize<MsgT>(msg, protocol);
+            serializer.generateIpcCallback(callback_f),
+            serializer.generateItcCallback(callback_f),
+            [serializer](std::shared_ptr<const Message> &msg, const std::string& protocol){
+                return serializer.template deserialize<MsgT>(msg, protocol);
             },
             SubSerializerT::Protocol()
         ));
 }
 
 template<class MsgT, class PubSerializerT>
-PublisherHandler<MsgT, PubSerializerT> AddPublisher(const std::string &topic) {
-    return PublisherHandler<MsgT, PubSerializerT>(
-            NodeBase::GlobalNode()->addPublisher(topic, PubSerializerT::Protocol()) );
-}
+std::unique_ptr<Publisher<MsgT>> CreatePublisher(const std::string &topic) {
+    Serializer<PubSerializerT> serializer;
 
-template<class SubSerializerT>
-void RemoveSubscriber(SubscriberHandler<SubSerializerT> &sub_handler){
-    NodeBase::GlobalNode()->removeSubscriber(sub_handler);
-}
-
-template <class MsgT, class PubSerializerT>
-void RemovePublisher(PublisherHandler<PubSerializerT, MsgT> &pub_handler){
-    NodeBase::GlobalNode()->removePublisher(pub_handler);
+    return std::make_unique<Publisher<MsgT>>(
+            NodeBase::GlobalNode()->addPublisher(topic, PubSerializerT::Protocol()),
+            [serializer](const std::shared_ptr<const MsgT>&obj){
+                return serializer.template serialize<MsgT>(obj);} );
 }
 
 }

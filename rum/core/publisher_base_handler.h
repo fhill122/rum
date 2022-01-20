@@ -17,9 +17,13 @@ class NodeBase;
 class PublisherBaseHandler {
   private:
     friend NodeBase;
-    PublisherBaseImpl* pimpl_;
+    PublisherBaseImpl* pimpl_ = nullptr;
 
   public:
+    inline PublisherBaseHandler() = default;
+
+    inline virtual ~PublisherBaseHandler() = default;
+
     explicit PublisherBaseHandler(PublisherBaseImpl* pimpl);
 
     bool isConnected() const;

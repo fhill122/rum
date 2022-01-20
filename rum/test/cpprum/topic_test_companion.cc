@@ -19,15 +19,15 @@ constexpr char kTag[] = "companion";
 struct SimpleFbNode{
   public:
     static constexpr char kTopic[] = "TestTopic";
-    PublisherHandler<flatbuffers::FlatBufferBuilder, SerializerFbs> pub;
+    Publisher<flatbuffers::FlatBufferBuilder>::UniquePtr pub;
 
     SimpleFbNode() {}
     ~SimpleFbNode(){
-        rum::RemovePublisher(pub);
+        // rum::RemovePublisher(pub);
     }
 
     void init(){
-        pub = rum::AddPublisher<flatbuffers::FlatBufferBuilder, SerializerFbs>(kTopic);
+        pub = rum::CreatePublisher<flatbuffers::FlatBufferBuilder, SerializerFbs>(kTopic);
     }
 
     static unique_ptr<flatbuffers::FlatBufferBuilder> CreateImage(){
@@ -50,7 +50,7 @@ void SimpleFbNode_IpcTest(){
     Log::I(kTag, "fire");
     constexpr int kNum = 10;
     for (int i = 0; i < kNum; ++i) {
-        fb_node.pub.pub(SimpleFbNode::CreateImage());
+        fb_node.pub->pub(SimpleFbNode::CreateImage());
         this_thread::sleep_for(10ms);
     }
     this_thread::sleep_for(20ms);
@@ -62,16 +62,16 @@ struct SimpleNativeNode {
   public:
     static constexpr char kTopic[] = "TestTopic";
     int id_pool = 0;
-    PublisherHandler<Predefinded, SerializerNative> pub;
+    Publisher<Predefinded>::UniquePtr pub;
 
     SimpleNativeNode() {}
 
     ~SimpleNativeNode(){
-        rum::RemovePublisher(pub);
+        // rum::RemovePublisher(pub);
     }
 
     void init(){
-        pub = rum::AddPublisher<Predefinded, SerializerNative>(kTopic);
+        pub = rum::CreatePublisher<Predefinded, SerializerNative>(kTopic);
     }
 
     unique_ptr<Predefinded> createObject(){
@@ -101,7 +101,7 @@ void SimpleNativeNode_IpcTest(){
     Log::I(kTag, "fire");
     constexpr int kNum = 10;
     for (int i = 0; i < kNum; ++i) {
-        native_node.pub.pub(native_node.createObject());
+        native_node.pub->pub(native_node.createObject());
         this_thread::sleep_for(10ms);
     }
     this_thread::sleep_for(20ms);

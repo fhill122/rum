@@ -26,7 +26,7 @@ struct ItcManager {
     std::unordered_map<std::string, std::vector<SubscriberBaseImpl*>> subs; RUM_LOCK_BY(mu)
 
   public:
-    static ItcManager& GlobalManager();
+    static std::shared_ptr<ItcManager>& GlobalManager();
 
     void addSub(SubscriberBaseImpl* sub); RUM_THREAD_SAFE
     void removeSub(SubscriberBaseImpl* sub); RUM_THREAD_SAFE

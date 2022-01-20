@@ -12,8 +12,8 @@ using namespace std;
 
 namespace rum{
 
-ItcManager &ItcManager::GlobalManager(){
-    static ItcManager manager;
+shared_ptr<ItcManager> &ItcManager::GlobalManager(){
+    static auto manager = make_shared<ItcManager>();
     return manager;
 }
 

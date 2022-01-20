@@ -16,8 +16,12 @@ class DemoComponentSub : rum::Component{
         rum::Log::I("sub", "sub start here");
 
         bool res = rum::Init();
-        rum::AddSubscriber<Point3d, rum::SerializerNative>("Point", DemoComponentSub::SubCallback);
-        while(true) this_thread::sleep_for(1s);
+        auto sub = rum::CreateSubscriber<Point3d, rum::SerializerNative>("Point", DemoComponentSub::SubCallback);
+
+        int n = 0;
+        while(n++<10) {
+            this_thread::sleep_for(1s);
+        }
         return 0;
     }
 

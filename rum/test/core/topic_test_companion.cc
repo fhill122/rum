@@ -98,10 +98,22 @@ void RemoteCrash(){
     ImplTest impl_test;
     impl_test.init();
 
-    this_thread::sleep_for((kNodeHbPeriod+50)*1ms);
+    this_thread::sleep_for(3*(kNodeHbPeriod+50)*1ms);
 
     Log::I(__func__, "crash!");
     abort();
+}
+
+void RemoteSubRemoval(){
+    Log::I(__func__, "start");
+    ImplTest impl_test;
+    impl_test.init();
+
+    this_thread::sleep_for(3*(kNodeHbPeriod+50)*1ms);
+    Log::I(__func__, "remove sub!");
+    impl_test.node_->removeSubscriber(impl_test.sub_);
+    this_thread::sleep_for(50ms);
+
 }
 
 void MultiIpc(){
@@ -144,6 +156,7 @@ void MultiTcp(){
 
 int main(int argc, char* argv[]){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
+    // zmq_force_delay = 50;
 
     AssertLog(argc>1, "input command");
     string cmd = argv[1];
@@ -156,6 +169,9 @@ int main(int argc, char* argv[]){
     }
     else if (cmd == "RemoteCrash"){
         RemoteCrash();
+    }
+    else if (cmd == "RemoteSubRemoval"){
+        RemoteSubRemoval();
     }
     else if (cmd == "MultiIpc"){
         MultiIpc();

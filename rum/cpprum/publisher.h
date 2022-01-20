@@ -1,4 +1,5 @@
 //
+// todo ivan. think about the api, should publisher base taken a void instead of message
 // Created by Ivan B on 2021/4/8.
 //
 
@@ -13,11 +14,14 @@
 
 namespace rum {
 
-template <class MsgT, class SerializerT>
-class PublisherHandler : public PublisherBaseHandler{
-  private:
+template <class MsgT>
+class Publisher : public PublisherBaseHandler{
   public:
-    inline static Serializer<SerializerT> s_{};
+    using SharedPtr = std::shared_ptr<Publisher<MsgT>>;
+    using UniquePtr = std::unique_ptr<Publisher<MsgT>>;
+
+  private:
+    SerFunc<MsgT> ser_func_;
 
   private:
     void internalPub(const std::shared_ptr<const MsgT> &msg){
@@ -26,7 +30,7 @@ class PublisherHandler : public PublisherBaseHandler{
 
         // pub ipc
         if (isConnected()){
-            auto message = s_.serialize(msg);
+            auto message = ser_func_(msg);
             if(message){
                 PublisherBaseHandler::pub(*message);
             } else{
@@ -36,8 +40,13 @@ class PublisherHandler : public PublisherBaseHandler{
     }
 
   public:
-    explicit PublisherHandler(PublisherBaseHandler &&base) : PublisherBaseHandler(std::move(base)){}
-    PublisherHandler() : PublisherBaseHandler(nullptr){};
+    Publisher(PublisherBaseHandler &&base, SerFunc<MsgT> ser_func) :
+            PublisherBaseHandler(std::move(base)), ser_func_(std::move(ser_func)){}
+    Publisher() : PublisherBaseHandler(nullptr){};
+
+    ~Publisher() override{
+        NodeBase::GlobalNode()->removePublisher(*this);
+    }
 
     bool hasSubscribers();
 
@@ -57,7 +66,7 @@ class PublisherHandler : public PublisherBaseHandler{
         internalPub(msg);
     }
 
-    // taking r value ref, no copy
+    // taking r value ref, move instead of copy
     void pub(MsgT&& msg){
         auto msg_ptr = std::make_shared<MsgT>(std::move(msg));
         internalPub(msg_ptr);

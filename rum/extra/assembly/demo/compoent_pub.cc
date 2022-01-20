@@ -15,7 +15,7 @@ class DemoComponentPub : rum::Component{
         rum::Log::I("pub", "pub start here");
 
         rum::Init();
-        auto pub = rum::AddPublisher<Point3d, rum::SerializerNative>("Point");
+        auto pub = rum::CreatePublisher<Point3d, rum::SerializerNative>("Point");
 
         while(true){
             unique_ptr<Point3d> point = make_unique<Point3d>();
@@ -24,7 +24,7 @@ class DemoComponentPub : rum::Component{
             point->z = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX/5));
             rum::Log::I("pub", "publishing a point of %.3f %.3f %.3f. address: %p",
                    point->x, point->y, point->z, point.get());
-            pub.pub(move(point));
+            pub->pub(move(point));
             this_thread::sleep_for(1s);
         }
         return 0;

@@ -18,7 +18,9 @@ class SubscriberBaseHandler{
     SubscriberBaseImpl* pimpl_ = nullptr;
 
   public:
+    inline SubscriberBaseHandler() = default;
     explicit SubscriberBaseHandler(SubscriberBaseImpl* pimpl);
+    inline virtual ~SubscriberBaseHandler() = default;
 };
 
 }

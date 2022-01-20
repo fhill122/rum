@@ -23,19 +23,18 @@ string argv0;
 struct SimpleFbNode : public ::testing::Test{
   public:
     static constexpr char kTopic[] = "TestTopic";
-    PublisherHandler<flatbuffers::FlatBufferBuilder, SerializerFbs> pub;
-    SubscriberHandler<SerializerFbs> sub;
+    Publisher<flatbuffers::FlatBufferBuilder>::UniquePtr pub;
+    Subscriber::UniquePtr sub;
     vector<shared_ptr<const Message>> received_msgs;
 
     SimpleFbNode() {}
     ~SimpleFbNode(){
-        rum::RemovePublisher(pub);
-        rum::RemoveSubscriber(sub);
+        Log::I(__func__, __func__ );
     }
 
     void init(){
-        pub = rum::AddPublisher<flatbuffers::FlatBufferBuilder, SerializerFbs>(kTopic);
-        sub = rum::AddSubscriber<Message, SerializerFbs>(kTopic,
+        pub = rum::CreatePublisher<flatbuffers::FlatBufferBuilder, SerializerFbs>(kTopic);
+        sub = rum::CreateSubscriber<Message, SerializerFbs>(kTopic,
                 [this](const shared_ptr<const Message> &msg){ subCallback(msg);});
     }
 
@@ -73,7 +72,7 @@ TEST_F(SimpleFbNode, ItcTest){
     constexpr int kNum = 10;
 
     for (int i = 0; i < kNum; ++i) {
-        pub.pub(CreateImage());
+        pub->pub(CreateImage());
         this_thread::sleep_for(10ms);
     }
 
@@ -96,21 +95,23 @@ struct SimpleNativeNode : public ::testing::Test{
   public:
     static constexpr char kTopic[] = "TestTopic";
     int id_pool = 0;
-    PublisherHandler<Predefinded, SerializerNative> pub;
-    SubscriberHandler<SerializerNative> sub;
+    Publisher<Predefinded>::UniquePtr pub;
+    Subscriber::UniquePtr sub;
     vector<shared_ptr<const Predefinded>> received_msgs;
     vector<shared_ptr<const Predefinded>> published_msgs;
 
     SimpleNativeNode() {}
     ~SimpleNativeNode(){
-        rum::RemovePublisher(pub);
-        rum::RemoveSubscriber(sub);
+        // rum::RemovePublisher(pub);
+        // rum::RemoveSubscriber(sub);
     }
 
     void init(){
-        pub = rum::AddPublisher<Predefinded, SerializerNative>(kTopic);
-        sub = rum::AddSubscriber<Predefinded, SerializerNative>(kTopic,
-                 [this](const shared_ptr<const Predefinded> &msg){ subCallback(msg);});
+        pub = rum::CreatePublisher<Predefinded, SerializerNative>(kTopic);
+        sub = rum::CreateSubscriber<Predefinded, SerializerNative>(kTopic,
+                                                                   [this](const shared_ptr<const Predefinded> &msg) {
+                                                                       subCallback(msg);
+                                                                   });
     }
 
     void subCallback(const shared_ptr<const Predefinded> &msg){
@@ -148,7 +149,7 @@ TEST_F(SimpleNativeNode, ItcTest){
 
     for (int i = 0; i < kNum; ++i) {
         shared_ptr<const Predefinded> obj = createObject();
-        pub.pub(obj);
+        pub->pub(obj);
         published_msgs.push_back(move(obj));
         this_thread::sleep_for(10ms);
     }

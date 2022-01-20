@@ -11,7 +11,6 @@
 #include "rum/core/msg/rum_sync_generated.h"
 #include "rum/extern/ivtb/stopwatch.h"
 #include "rum/core/msg/util.h"
-#include "itc_manager.h"
 
 using namespace std;
 using namespace ivtb;
@@ -81,7 +80,7 @@ void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
     if (sync->type()==msg::SyncType_Remove)
         AssertLog(false, "not implemented yet");
 
-    auto update = RemoteManager::GlobalManager().wholeSyncUpdate(msg.data(), msg.size());
+    auto update = remote_manager_->wholeSyncUpdate(msg.data(), msg.size());
 
     updatePubConnection(sync->node(), update);
 }
@@ -115,7 +114,7 @@ void NodeBaseImpl::syncFunc(){
 }
 
 void NodeBaseImpl::checkRemote() {
-    auto removal = RemoteManager::GlobalManager().checkAndRemove();
+    auto removal = remote_manager_->checkAndRemove();
     for (const auto &str : removal){
         const auto* sync = msg::GetSyncBroadcast(str.data());
         RemoteManager::NodeUpdate update;
@@ -158,14 +157,14 @@ SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
         sync_task_ = make_shared<Scheduler::Task>(*sync_task_);
         sync_scheduler_.schedule(sync_task_);
     }
-    ItcManager::GlobalManager().addSub(sub_raw);
+    itc_manager_->addSub(sub_raw);
     return sub_raw;
 }
 
 void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
     AssertLog(sub, "");
     // remove pointer from itc first
-    ItcManager::GlobalManager().removeSub(sub);
+    itc_manager_->removeSub(sub);
     // remove sub from container
     bool topic_removed = sub_container_->removeSub(sub);
     if (topic_removed){
@@ -186,8 +185,8 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
     // connect in single thread sync_tp_ to avoid locking for connect operation.
     // it is ok to capture reference since we will wait the future.
     auto connect_future = sync_tp_->enqueue([&]{
-        auto itr = RemoteManager::GlobalManager().topic_book.find(topic);
-        if (itr!=RemoteManager::GlobalManager().topic_book.end()){
+        auto itr = remote_manager_->topic_book.find(topic);
+        if (itr!=remote_manager_->topic_book.end()){
             for (const auto *node_info : itr->second){
                 const auto* sync_fb = node_info->getSyncFb();
                 if (shouldConnectIpc(sync_fb->node())){
@@ -220,7 +219,7 @@ void NodeBaseImpl::shutdown() {
     if (is_down_.load(std::memory_order_acquire))
         return;
 
-    log.w(__func__, __func__ );
+    // log.w(__func__, __func__ );
     // todo ivan. broadcast its death
     std::this_thread::sleep_for(100ms);
 
@@ -228,15 +227,16 @@ void NodeBaseImpl::shutdown() {
     syncsub_container_->stop();
     sub_container_->stop();
 
+    sync_scheduler_.stop();
     sync_tp_->stopAndClear();
 
-    // remove itc subs
+    // subs
     auto subs = sub_container_->getSubs();
-    ItcManager::GlobalManager().batchRemove(subs);
-    // note: subs in sub_container are not removed here
+    itc_manager_->batchRemove(subs);
+    sub_container_->clearSubs();
 
     is_down_.store(true, memory_order_release);
-    sync_scheduler_.stop();
+    // log.w(__func__, "finished" );
 }
 
 void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_out) {
@@ -245,6 +245,7 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
 
     bool res1 = sync_pub_->connect(addr_in);
     bool res2 = syncsub_container_->connectRaw(addr_out);
+    this_thread::sleep_for(50ms);
 
     AssertLog(res1&&res2, "failed to connect to " + addr_in + " and " + addr_out);
     syncsub_container_->start();
