@@ -116,8 +116,7 @@ class Scheduler : public std::enable_shared_from_this<ivtb::Scheduler>{
     std::unordered_set<std::shared_ptr<Task>> tasks_;
     std::mutex tasks_mu_;
     std::unique_ptr<std::thread> schedule_t_;
-    std::shared_ptr<ThreadPool> task_tp_;
-    const bool shared_tp_;
+    std::unique_ptr<ThreadPool> task_tp_;
     std::condition_variable cv_;
     bool stop_ = false;
   public:
@@ -131,9 +130,6 @@ class Scheduler : public std::enable_shared_from_this<ivtb::Scheduler>{
 
   public:
     inline explicit Scheduler(int task_threads = 0);
-    // note: for shared thread_pool version, we can not guarantee all tasks are removed from the pool after stop or destruction
-    inline explicit Scheduler(std::shared_ptr<ThreadPool> thread_pool);
-    inline explicit Scheduler(std::unique_ptr<ThreadPool> thread_pool);
     inline ~Scheduler();
 
     /**
@@ -167,16 +163,8 @@ class Scheduler : public std::enable_shared_from_this<ivtb::Scheduler>{
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Scheduler::Scheduler(int task_threads): shared_tp_(false) {
-    if (task_threads>0) task_tp_ = std::make_shared<ThreadPool>(task_threads, "SchedulerTp");
-    schedule_t_ = std::make_unique<std::thread>([this]{loop();});
-}
-
-Scheduler::Scheduler(std::shared_ptr<ThreadPool> thread_pool): task_tp_(std::move(thread_pool)), shared_tp_(true) {
-    schedule_t_ = std::make_unique<std::thread>([this]{loop();});
-}
-
-Scheduler::Scheduler(std::unique_ptr<ThreadPool> thread_pool): task_tp_(std::move(thread_pool)), shared_tp_(false) {
+Scheduler::Scheduler(int task_threads){
+    if (task_threads>0) task_tp_ = std::make_unique<ThreadPool>(task_threads, "SchedulerTp");
     schedule_t_ = std::make_unique<std::thread>([this]{loop();});
 }
 
@@ -320,12 +308,6 @@ void Scheduler::loop() {
 
             if (task_tp_){
                 task_tp_->enqueue([this, task = std::move(task)]() mutable {executeTask(std::move(task));});
-                // given scheduler is a shared_ptr, we could make it safer for shared task_tp_
-                // task_tp_->enqueue([weak_this = weak_from_this(), task = std::move(task)]() mutable {
-                //     if (auto shared_this = weak_this.lock()){
-                //         shared_this->executeTask(std::move(task));
-                //     }
-                // });
             }
             else{
                 executeTask(std::move(task));
@@ -342,8 +324,7 @@ void Scheduler::stop() {
         cv_.notify_one();
     }
     schedule_t_->join();
-    // todo ivan. task could still be executed in background if shared_tp_. can we wait? keep future?
-    if(!shared_tp_ && task_tp_) task_tp_->stopAndClear();
+    if(task_tp_) task_tp_->stopAndClear();
 }
 
 }

@@ -52,6 +52,8 @@ struct RemoteManager {
     // <topic, NodeInfo>
     std::unordered_map<std::string, std::vector<NodeInfo*>> topic_book;
 
+    static std::shared_ptr<RemoteManager>& GlobalManager();
+
     NodeUpdate wholeSyncUpdate(const void *fb_data, size_t size); RUM_THREAD_UNSAFE
 
     // this should be called in the same thread as update() to prevent sync

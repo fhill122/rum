@@ -24,7 +24,7 @@ class NodeBaseImpl {
     const int nid_;
 
     std::shared_ptr<ItcManager> itc_manager_ = ItcManager::GlobalManager();
-    std::shared_ptr<RemoteManager> remote_manager_ = std::make_shared<RemoteManager>();
+    std::shared_ptr<RemoteManager> remote_manager_ = RemoteManager::GlobalManager();
     std::unique_ptr<SubContainer> sub_container_;
     std::unique_ptr<SubContainer> syncsub_container_;
     std::unique_ptr<PublisherBaseImpl> sync_pub_;
@@ -33,7 +33,7 @@ class NodeBaseImpl {
     std::shared_ptr<ivtb::ThreadPool> sync_tp_ = std::make_shared<ivtb::ThreadPool>(1);
 
     // thread to broadcast sync, include heartbeat
-    ivtb::Scheduler sync_scheduler_{sync_tp_};
+    ivtb::Scheduler sync_scheduler_{0};
     std::shared_ptr<ivtb::Scheduler::Task> sync_task_;
     std::atomic<unsigned long> sync_version_{0};
     std::atomic<bool> is_down_{false};

@@ -261,9 +261,13 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
     this_thread::sleep_for(50ms);
     sub_container_->start();
 
-    sync_task_ = make_shared<Scheduler::Task>([this]{ syncFunc();}, kNodeHbPeriod*1e-3, 0);
+    sync_task_ = make_shared<Scheduler::Task>([this]{
+            sync_tp_->enqueue([this]{syncFunc();});
+        }, kNodeHbPeriod*1e-3, 0);
     sync_scheduler_.schedule(sync_task_);
-    sync_scheduler_.schedule( Scheduler::Task{ [this]{ checkRemote();}, kNodeOfflineCheckPeriod*1e-3, 0});
+    sync_scheduler_.schedule( Scheduler::Task{ [this]{
+            sync_tp_->enqueue([this]{checkRemote();});
+        }, kNodeOfflineCheckPeriod*1e-3, 0});
 }
 
 }

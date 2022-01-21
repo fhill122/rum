@@ -35,6 +35,11 @@ bool RemoteManager::NodeInfo::shouldRemove() {
     return res;
 }
 
+std::shared_ptr<RemoteManager> &RemoteManager::GlobalManager() {
+    static shared_ptr<RemoteManager> manager = make_shared<RemoteManager>();
+    return manager;
+}
+
 RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, size_t size) {
     NodeUpdate update;
     const auto *sync = msg::GetSyncBroadcast(fb_data);

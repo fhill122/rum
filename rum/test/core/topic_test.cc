@@ -240,11 +240,13 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
 
 
 int main(int argc, char **argv){
+    // zmq_force_delay = 50;
+    // todo ivan. wait until master is up and pingable
+    this_thread::sleep_for(10ms);
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::w);
     argv0 = argv[0];
-    // zmq_force_delay = 50;
 
     ::testing::InitGoogleTest(&argc, argv);
     int res =  RUN_ALL_TESTS();
