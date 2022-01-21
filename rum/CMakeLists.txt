@@ -14,8 +14,6 @@ add_library(rumcore SHARED
     core/internal/subscriber_base_impl.cc
     core/internal/node_base_impl.cc
     core/internal/master.cc
-    core/internal/node_info.cc
-    core/internal/socket_monitor.cc
     core/internal/itc_manager.cc
     core/internal/remote_manager.cc
 
