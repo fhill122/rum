@@ -131,8 +131,7 @@ class Scheduler : public std::enable_shared_from_this<ivtb::Scheduler>{
 
   public:
     inline explicit Scheduler(int task_threads = 0);
-    // note: for shared thread_pool version, we can not guarantee all tasks are removed from the pool
-    // after stop or destruction, we do assure tasks will not actually run if the scheduler is destroyed
+    // note: for shared thread_pool version, we can not guarantee all tasks are removed from the pool after stop or destruction
     inline explicit Scheduler(std::shared_ptr<ThreadPool> thread_pool);
     inline explicit Scheduler(std::unique_ptr<ThreadPool> thread_pool);
     inline ~Scheduler();
@@ -320,11 +319,13 @@ void Scheduler::loop() {
             }
 
             if (task_tp_){
-                task_tp_->enqueue([weak_this = weak_from_this(), task = std::move(task)]() mutable {
-                    if (auto shared_this = weak_this.lock()){
-                        shared_this->executeTask(std::move(task));
-                    }
-                });
+                task_tp_->enqueue([this, task = std::move(task)]() mutable {executeTask(std::move(task));});
+                // given scheduler is a shared_ptr, we could make it safer for shared task_tp_
+                // task_tp_->enqueue([weak_this = weak_from_this(), task = std::move(task)]() mutable {
+                //     if (auto shared_this = weak_this.lock()){
+                //         shared_this->executeTask(std::move(task));
+                //     }
+                // });
             }
             else{
                 executeTask(std::move(task));
