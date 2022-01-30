@@ -8,6 +8,7 @@
 #include "internal/subscriber_base_impl.h"
 #include "rum/common/log.h"
 #include "rum/common/common.h"
+#include "rum/common/misc.h"
 
 
 using namespace std;
@@ -42,6 +43,7 @@ NodeBase::addSubscriber(const std::string &topic,
                         const ItcFunc &itc_cb,
                         const DeserFunc &deserialize_f,
                         const std::string &protocol) {
+    AssertLog(StrStartWith(topic, kTopicReserve), "reserved topic name");
     return SubscriberBaseHandler(pimpl_->addSubscriber(topic, tp, queue_size, ipc_cb, itc_cb, deserialize_f, protocol));
 }
 
@@ -52,6 +54,7 @@ void NodeBase::removeSubscriber(SubscriberBaseHandler &subscriber_handler) {
 
 PublisherBaseHandler NodeBase::addPublisher(const std::string &topic,
                                             const std::string &protocol) {
+    AssertLog(StrStartWith(topic, kTopicReserve), "reserved topic name");
     return PublisherBaseHandler(pimpl_->addPublisher(topic, protocol));
 }
 

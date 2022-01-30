@@ -3,15 +3,29 @@ namespace rum.msg;  // yeah it is not camel case, bite me
 enum MsgType : byte{
     Interrupt,
     Message,
-    ServiceCall
+    ServiceRequest,
+    ServiceResponse,
+}
+
+table ReqInfo{
+    rep_topic:string;
+    id:uint32;
+}
+
+table RepInfo{
+    status:int8;
+    id:uint32;
 }
 
 table MsgHeader{
     type:MsgType;
+    // topic or srv
     name:string;
     protocal:string;
-    // topic:[byte];
-    // protocal:[byte];
+
+    // other fields depends on type
+    request:ReqInfo;
+    response:RepInfo;
 }
 
 root_type MsgHeader;

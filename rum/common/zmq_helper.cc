@@ -14,18 +14,15 @@
 #include <netdb.h>
 #include <random>
 
-#include "rum/common/common.h"
-#include "rum/common/log.h"
+#include "misc.h"
+#include "common.h"
+#include "log.h"
 #include "rum/extern/ivtb/thread_util.h"
 #include "rum/extern/ivtb/stopwatch.h"
 
 using namespace std;
 
 namespace rum{
-
-bool StrStartWith(string full, string head){
-    return strncmp(full.c_str(), head.c_str(), head.size()) == 0;
-}
 
 const shared_ptr<zmq::context_t>& shared_context(){
     // proper implementation

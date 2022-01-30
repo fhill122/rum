@@ -4,7 +4,6 @@
 
 #include "publisher_base_impl.h"
 
-#include "../msg/rum_header_generated.h"
 #include <rum/common/common.h>
 #include <rum/common/log.h>
 #include <rum/common/zmq_helper.h>
@@ -17,19 +16,22 @@ using namespace std;
 namespace rum {
 
 rum::PublisherBaseImpl::PublisherBaseImpl(string topic, std::string protocol,
-                                          shared_ptr<zmq::context_t> context, bool to_bind):
-        topic_(move(topic)), protocol_(move(protocol)), to_bind_(to_bind), context_(move(context)){
+                                          shared_ptr<zmq::context_t> context, bool to_bind, msg::MsgType msg_type):
+        topic_(move(topic)), protocol_(move(protocol)), to_bind_(to_bind), context_(move(context)),
+        msg_type_(msg_type){
     constexpr int kHWM = 0;
 
     zmq_publisher_ = make_unique<zmq::socket_t>(*context_, ZMQ_PUB);
     zmq_publisher_->setsockopt(ZMQ_SNDHWM, &kHWM, sizeof(kHWM));
 
-    flatbuffers::FlatBufferBuilder header_builder;
-    auto header_fb = msg::CreateMsgHeaderDirect(header_builder,
-            msg::MsgType_Message, topic_.c_str(), protocol_.c_str());
-    header_builder.Finish(header_fb);
-    // todo ivan. we can do this with null deleter. but how to avoid memory leak once publisher is destroyed? linger time force to zero?
-    msg_header_.rebuild(header_builder.GetBufferPointer(), header_builder.GetSize());
+    if (msg_type_ == msg::MsgType_Message){
+        flatbuffers::FlatBufferBuilder header_builder;
+        auto header_fb = msg::CreateMsgHeaderDirect(header_builder,
+                                                    msg_type_, topic_.c_str(), protocol_.c_str());
+        header_builder.Finish(header_fb);
+        // todo ivan. we can do this with null deleter. but how to avoid memory leak once publisher is destroyed? linger time force to zero?
+        topic_header_.rebuild(header_builder.GetBufferPointer(), header_builder.GetSize());
+    }
 }
 
 PublisherBaseImpl::~PublisherBaseImpl() {
@@ -92,11 +94,6 @@ bool PublisherBaseImpl::isConnected() {
     return !conn_list_.empty();
 }
 
-// void PublisherBaseImpl::addItcSub(SubscriberBaseImpl* sub_wp){
-//     lock_guard<mutex> lock(itc_mu_);
-//     itc_subs_.push_back(sub_wp);
-// }
-
 bool PublisherBaseImpl::publishIpc(zmq::message_t &header, zmq::message_t &body) {
     lock_guard<mutex> lock(zmq_mu_);
     if (send(*zmq_publisher_, header, true) == 0){
@@ -108,8 +105,40 @@ bool PublisherBaseImpl::publishIpc(zmq::message_t &header, zmq::message_t &body)
 }
 
 bool PublisherBaseImpl::publishIpc(zmq::message_t &body){
-    zmq::message_t header(msg_header_.data(), msg_header_.size());
+    AssertLog(msg_type_ == msg::MsgType_Message, "");
+    zmq::message_t header(topic_header_.data(), topic_header_.size());
     return publishIpc(header, body);
+}
+
+bool PublisherBaseImpl::publishReqIpc(unsigned int id, const std::string &rep_topic, zmq::message_t &body) {
+    AssertLog(msg_type_ == msg::MsgType_ServiceRequest, "");
+    auto* header_builder = new flatbuffers::FlatBufferBuilder();
+    auto req_info_fb = msg::CreateReqInfoDirect(*header_builder, rep_topic.c_str(), id);
+    auto header_fb = msg::CreateMsgHeaderDirect(*header_builder, msg::MsgType_ServiceRequest,
+                                                topic_.c_str(), protocol_.c_str(), req_info_fb, 0);
+    header_builder->Finish(header_fb);
+    zmq::message_t msg_header_(header_builder->GetBufferPointer(), header_builder->GetSize(),
+        [](void *, void* builder){
+            delete (flatbuffers::FlatBufferBuilder*)builder;
+        }, header_builder);
+
+    return publishIpc(msg_header_, body);
+}
+
+bool PublisherBaseImpl::publishRepIpc(unsigned int id, char status, zmq::message_t &body) {
+    AssertLog(msg_type_ == msg::MsgType_ServiceResponse, "");
+    auto* header_builder = new flatbuffers::FlatBufferBuilder();
+    auto rep_info_fb = msg::CreateRepInfo(*header_builder, status, id);
+    auto header_fb = msg::CreateMsgHeaderDirect(*header_builder, msg::MsgType_ServiceResponse,
+                                                topic_.c_str(), protocol_.c_str(), 0, rep_info_fb);
+
+    header_builder->Finish(header_fb);
+    zmq::message_t msg_header_(header_builder->GetBufferPointer(), header_builder->GetSize(),
+                               [](void *, void* builder){
+                                   delete (flatbuffers::FlatBufferBuilder*)builder;
+                               }, header_builder);
+
+    return publishIpc(msg_header_, body);
 }
 
 bool PublisherBaseImpl::scheduleItc(const shared_ptr<const void> &msg) {

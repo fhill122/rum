@@ -8,10 +8,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <rum/extern/zmq/zmq.hpp>
-#include <rum/common/def.h>
-#include "rum/core/internal/subscriber_base_impl.h"
-
+#include "rum/extern/zmq/zmq.hpp"
+#include "rum/common/def.h"
+#include "subscriber_base_impl.h"
 
 namespace rum {
 
@@ -23,7 +22,7 @@ class SubContainer {
   private:
     // <topic, list of sub raw>
     using SubBook = std::unordered_map<std::string,
-                    std::vector<std::unique_ptr<SubscriberBaseImpl>>>;
+                    std::vector<std::shared_ptr<SubscriberBaseImpl>>>;
 
     struct InternalTask{
         enum TaskType {kAdd, kRemove, kStop};
@@ -73,7 +72,7 @@ class SubContainer {
      * @param sub sub
      * @return true if it creates a new topic
      */
-    bool addSub(std::unique_ptr<SubscriberBaseImpl> sub);
+    bool addSub(std::unique_ptr<SubscriberBaseImpl> sub_uptr);
 
     /**
      * Remove a sub

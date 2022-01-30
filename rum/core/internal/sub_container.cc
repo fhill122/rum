@@ -8,8 +8,9 @@
 #include "rum/common/log.h"
 #include "rum/common/zmq_helper.h"
 #include "rum/common/misc.h"
-#include "rum/core/internal/publisher_base_impl.h"
 #include "rum/core/msg/rum_header_generated.h"
+#include "publisher_base_impl.h"
+#include "client_base_impl.h"
 
 using namespace std;
 
@@ -122,6 +123,7 @@ bool SubContainer::getMsg(zmq::message_t &header, zmq::message_t &body) {
     return false;
 }
 
+// todo ivan. doing here. we have to make sure that when removing sub, we could wait until all ongoing callbacks are finished
 bool SubContainer::loop() {
     zmq::message_t header;
     auto body = make_shared<zmq::message_t>();
@@ -132,6 +134,7 @@ bool SubContainer::loop() {
     if (header_fb->type() == msg::MsgType::MsgType_Interrupt){
         return false;
     }
+    // topic message handling
     else if (header_fb->type() == msg::MsgType::MsgType_Message){
         log.v(TAG, "received a msg of topic %s", header_fb->name()->c_str());
         // todo ivan. consider dispatch with daemon thread / multi thread
@@ -140,17 +143,56 @@ bool SubContainer::loop() {
         if (itr == subs_.end()){
             // happens if a sub just removed
             log.d(TAG, "unknown topic: %s", header_fb->name()->c_str());
-            for (const auto &s : subs_){
-                log.d(TAG, "topic: %s", s.first.c_str());
-            }
             return true;
         }
-        auto sub_msg = make_shared<SubscriberBaseImpl::Msg>(body, itr->second.size()==1, false,
-                                                            header_fb->protocal()->str());
+        shared_ptr<SubscriberBaseImpl::SubMsg> sub_msg;
+        if (itr->second.size()==1){
+            sub_msg = make_shared<SubscriberBaseImpl::TopicIpcMsgOwned>(
+                    move(body), header_fb->protocal()->str() );
+            // well, sub_msg could be moved here to enqueue
+        }else{
+            sub_msg = make_shared<SubscriberBaseImpl::TopicIpcMsg>(
+                    move(body), header_fb->protocal()->str() );
+        }
         for (auto &sub : itr->second){
             sub->enqueue(sub_msg);
         }
-        // todo ivan. if it is a service call reply, should we just notify here?
+    }
+    // srv request
+    else if (header_fb->type() == msg::MsgType_ServiceRequest){
+        log.v(TAG, "received a srv request of %s", header_fb->name()->c_str());
+        // todo ivan. consider dispatch with daemon thread / multi thread
+        lock_guard<mutex> lock(subs_mu_);
+        auto itr = subs_.find(header_fb->name()->str());
+        if (itr == subs_.end()){
+            // happens if a sub just removed
+            log.d(TAG, "unknown srv: %s", header_fb->name()->c_str());
+            return true;
+        }
+        auto sub_msg = make_shared<SubscriberBaseImpl::SrvIpcRequest>(move(body), header_fb->protocal()->str(),
+                                      header_fb->request()->id(), header_fb->request()->rep_topic()->str());
+        AssertLog(itr->second.size()==1, "multiple local services");
+        itr->second[0]->enqueue(sub_msg);
+    }
+    // for srv response, we do all the work here.
+    else if (header_fb->type() == msg::MsgType_ServiceResponse){
+        lock_guard lock(ClientBaseImpl::wait_list_mu_);
+        auto itr = ClientBaseImpl::wait_list_.find(header_fb->response()->id());
+        if (itr == ClientBaseImpl::wait_list_.end()){
+            // already timed out
+        } else{
+            {
+                lock_guard result_lock(itr->second->mu);
+                itr->second->response = move(body);
+                if (header_fb->response()->status()==0){
+                    itr->second->status = SrvStatus::OK;
+                } else{
+                    itr->second->status = SrvStatus::ServerErr;
+                }
+            }
+            itr->second->cv.notify_one();
+            ClientBaseImpl::wait_list_.erase(itr);
+        }
     }
 
     return true;
@@ -158,7 +200,7 @@ bool SubContainer::loop() {
 
 void SubContainer::interrupt() {
     flatbuffers::FlatBufferBuilder header_builder;
-    auto header_fb = msg::CreateMsgHeaderDirect(header_builder, msg::MsgType_Interrupt, "", "");
+    auto header_fb = msg::CreateMsgHeaderDirect(header_builder, msg::MsgType_Interrupt);
     header_builder.Finish(header_fb);
 
     zmq::message_t header_msg(header_builder.GetBufferPointer(), header_builder.GetSize());
@@ -169,7 +211,8 @@ void SubContainer::interrupt() {
     AssertLog(pub_res == 0, "failed to interrupt");
 }
 
-bool SubContainer::addSub(unique_ptr<SubscriberBaseImpl> sub) {
+bool SubContainer::addSub(unique_ptr<SubscriberBaseImpl> sub_uptr) {
+    shared_ptr<SubscriberBaseImpl> sub = move(sub_uptr);
     lock_guard<mutex> lock(subs_mu_);
     string topic = sub->topic_;
     string protocol = sub->protocol_;
@@ -184,10 +227,26 @@ bool SubContainer::addSub(unique_ptr<SubscriberBaseImpl> sub) {
     }
 }
 
+// todo ivan. doing here, though sub is removed, could be ongoing callback still in background?
 bool SubContainer::removeSub(SubscriberBaseImpl *sub) {
-    lock_guard<mutex> lock(subs_mu_);
-    return MapVecRemove(subs_, sub->topic_, sub,
-         [sub](const unique_ptr<SubscriberBaseImpl> &obj){return sub==obj.get();});
+    shared_ptr<SubscriberBaseImpl> sub_sptr;
+    bool topic_removed;
+    {
+        lock_guard<mutex> lock(subs_mu_);
+        // move sub from subs_
+        tie(topic_removed, sub_sptr) = MapVecMove(subs_, sub->topic_, sub,
+                          [sub](const shared_ptr<SubscriberBaseImpl> &obj){return sub==obj.get();});
+    }
+    weak_ptr<SubscriberBaseImpl> sub_wptr = sub_sptr;
+    // release ownership of tp so tp destroy will not happen after callback in tp threads
+    sub_sptr->clearAndReleaseTp();
+    // destroy(possible) sub here without lock
+    sub_sptr.reset();
+    // this is ugly but adds little extra work to sub callback
+    while(!sub_wptr.expired()){
+        this_thread::sleep_for(1ms);
+    }
+    return topic_removed;
 }
 
 void SubContainer::clearSubs() {

@@ -26,8 +26,14 @@ constexpr int kNodeOfflineCheckPeriod = 500;  // ms
 // this instead of a single timeout to ensure node will not be deleted in case of system change, system suspend, etc.
 constexpr int kNodeOfflineCheckCounts = 2;
 
+// reserved topic prefix (including srv name as it uses topic internally)
 constexpr char kTopicReserve[] = "__";
+// topic for synchronization
 constexpr char kSyncTopic[] = "__sync";
+// service request pub sub is prefixed with this
+constexpr char kSrvReqTopicPrefix[] = "__q_";
+// service response pub sub is prefixes with this + node_string + "_"
+constexpr char kSrvRepTopicPrefix[] = "__p_";
 
 constexpr char kIpEnv[] = "RUM_IP";
 constexpr char kMasterPortInEnv[] = "RUM_MASTER_IN";
@@ -39,7 +45,6 @@ extern const pid_t kPid;
 
 std::string GetMasterInAddr();
 std::string GetMasterOutAddr();
-
 
 }
 

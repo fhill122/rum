@@ -7,8 +7,9 @@
 
 #include <unordered_set>
 
-#include <rum/extern/zmq/zmq.hpp>
-#include <rum/common/def.h>
+#include "rum/extern/zmq/zmq.hpp"
+#include "rum/common/def.h"
+#include "../msg/rum_header_generated.h"
 #include "subscriber_base_impl.h"
 
 namespace rum {
@@ -21,7 +22,7 @@ class PublisherBaseImpl {
     std::string ipc_addr_;
     const bool to_bind_;
     std::mutex zmq_mu_;
-    zmq::message_t msg_header_;
+    zmq::message_t topic_header_;
 
     // the reason conn_list_ is not guarded by zmq_mu_ is to speed up frequent sync connection check
     std::unordered_set<std::string> conn_list_;
@@ -32,13 +33,14 @@ class PublisherBaseImpl {
   public:
     const std::string topic_;
     const std::string protocol_;
+    const msg::MsgType msg_type_;
 
   private:
   protected:
 
   public:
     PublisherBaseImpl(std::string topic, std::string protocol, std::shared_ptr<zmq::context_t> context,
-                      bool to_bind = false);
+                      bool to_bind = false, msg::MsgType msg_type = msg::MsgType::MsgType_Message);
 
     virtual ~PublisherBaseImpl();
 
@@ -51,11 +53,13 @@ class PublisherBaseImpl {
     inline std::mutex& getPubMutex(){return zmq_mu_;}
     bool isConnected();
 
-    // void addItcSub(SubscriberBaseImpl *sub_wp);
-
+    // topic
     bool publishIpc(zmq::message_t &header, zmq::message_t &body);
     bool publishIpc(zmq::message_t &body);
     bool publishIpc(zmq::message_t &&body){ return publishIpc(body);}
+    // srv
+    bool publishReqIpc(unsigned int id, const std::string &rep_topic, zmq::message_t &body);
+    bool publishRepIpc(unsigned int id, char status, zmq::message_t &body);
 
     bool scheduleItc(const std::shared_ptr<const void> &msg);
 

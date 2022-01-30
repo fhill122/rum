@@ -21,6 +21,7 @@ unique_ptr<Master> CreateGlobalMaster(){
 
 unique_ptr<Master> Master::master_ = CreateGlobalMaster();
 
+// todo ivan. add health check: ping master, if no response, find which process occupied port and kill it
 Master::Master(std::shared_ptr<zmq::context_t> context) :
         context_(std::move(context)) {
     sub_container_ = make_unique<SubContainer>(context_);

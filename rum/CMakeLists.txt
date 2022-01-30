@@ -6,9 +6,11 @@ include_directories(BEFORE ${CMAKE_SOURCE_DIR} extern)
 
 add_library(rumcore SHARED
     common/common.cc
+    common/misc.cc
     common/zmq_helper.cc
 
-    core/internal/server_base.cc
+    core/internal/server_base_impl.cc
+    core/internal/client_base_impl.cc
     core/internal/publisher_base_impl.cc
     core/internal/sub_container.cc
     core/internal/subscriber_base_impl.cc

@@ -23,6 +23,12 @@ template<typename T>
 using SerFunc = std::function<
         std::unique_ptr<Message> (const std::shared_ptr<const T>&) >;
 
+template<typename Q, typename P>
+using SrvFunc = std::function<bool(const std::shared_ptr<const Q>& request, std::shared_ptr<P>& response)>;
+using SrvItcFunc = std::function<bool(const std::shared_ptr<const void>& request, std::shared_ptr<void>& response)>;
+using SrvIpcFunc = std::function<
+        bool(const std::shared_ptr<const Message>& request, const std::string& req_protocol, std::shared_ptr<Message>& response) >;
+
 template<typename S>
 class Serializer {
 

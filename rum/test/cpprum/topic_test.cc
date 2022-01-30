@@ -109,9 +109,9 @@ struct SimpleNativeNode : public ::testing::Test{
     void init(){
         pub = rum::CreatePublisher<Predefinded, SerializerNative>(kTopic);
         sub = rum::CreateSubscriber<Predefinded, SerializerNative>(kTopic,
-                                                                   [this](const shared_ptr<const Predefinded> &msg) {
-                                                                       subCallback(msg);
-                                                                   });
+                [this](const shared_ptr<const Predefinded> &msg) {
+                   subCallback(msg);
+                });
     }
 
     void subCallback(const shared_ptr<const Predefinded> &msg){

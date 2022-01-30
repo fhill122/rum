@@ -205,7 +205,7 @@ PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
 }
 
 
-void NodeBaseImpl::removePublisher(PublisherBaseImpl *pub) {
+void NodeBaseImpl::removePublisher(PublisherBaseImpl* &pub) {
     AssertLog(pub, "");
     auto remove_future = sync_tp_->enqueue([pub, this]{
         MapVecRemove(pubs_, pub->topic_, pub,
@@ -213,6 +213,31 @@ void NodeBaseImpl::removePublisher(PublisherBaseImpl *pub) {
 
     });
     remove_future.wait();
+    pub = nullptr;
+}
+
+ClientBaseImpl *NodeBaseImpl::addClient(const string &srv_name, const string &pub_protocol) {
+    auto *pub = addPublisher(kSrvReqTopicPrefix + srv_name, pub_protocol);
+    // itc or ipc will never be called
+    auto *sub = addSubscriber(kSrvRepTopicPrefix + srv_name, ClientBaseImpl::sub_dumb_tp_, 0,
+                              nullptr, nullptr, nullptr);
+    return new ClientBaseImpl(pub, sub);
+}
+
+void NodeBaseImpl::removeClient(ClientBaseImpl *&client) {
+    removeSubscriber(client->sub_);
+    removePublisher(client->pub_);
+    client = nullptr;
+}
+
+ServerBaseImpl *NodeBaseImpl::addServer(const string &srv_name,
+                                        const shared_ptr<ivtb::ThreadPool> &tp,
+                                        size_t queue_size,
+                                        const SrvItcFunc &itc_func,
+                                        const SrvIpcFunc &ipc_func,
+                                        const string &sub_protocol,
+                                        const string &pub_protocol) {
+    return nullptr;
 }
 
 void NodeBaseImpl::shutdown() {

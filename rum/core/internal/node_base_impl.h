@@ -7,6 +7,8 @@
 
 #include "subscriber_base_impl.h"
 #include "publisher_base_impl.h"
+#include "client_base_impl.h"
+#include "server_base_impl.h"
 #include "master.h"
 #include "remote_manager.h"
 #include "itc_manager.h"
@@ -69,9 +71,20 @@ class NodeBaseImpl {
 
     void removeSubscriber(SubscriberBaseImpl* &sub); RUM_THREAD_SAFE
 
-    PublisherBaseImpl * addPublisher(const std::string &topic, const std::string &protocol); RUM_THREAD_SAFE
+    PublisherBaseImpl* addPublisher(const std::string &topic, const std::string &protocol); RUM_THREAD_SAFE
 
-    void removePublisher(PublisherBaseImpl *pub); RUM_THREAD_SAFE
+    void removePublisher(PublisherBaseImpl* &pub); RUM_THREAD_SAFE
+
+    ClientBaseImpl* addClient(const std::string &srv_name, const std::string &pub_protocol); RUM_THREAD_SAFE
+
+    void removeClient(ClientBaseImpl* &client);  RUM_THREAD_SAFE
+
+    ServerBaseImpl* addServer(const std::string &srv_name,
+                              const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
+                              const SrvItcFunc &itc_func,
+                              const SrvIpcFunc &ipc_func,
+                              const std::string &sub_protocol = "",
+                              const std::string &pub_protocol = "");
 
     // todo ivan. should we ever call it? especially for rumassembly modules
     void shutdown();

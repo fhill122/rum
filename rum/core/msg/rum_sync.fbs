@@ -14,13 +14,21 @@ table SubscriberInfo{
 
 table ServerInfo{
     name:string;
-    protocol:string;
+    request_protocol:string;
+    response_protocol:string;
+}
+
+table ClientInfo{
+    name:string;
+    request_protocol:string;
+    response_protocol:string;
 }
 
 table NodeId{
     nid:int32;
     pid:int32;
     // a single addr is insufficient to id a node in tcp mode, a new node may be launched with same address
+    // todo ivan. instead of a string literal, use a 64 bit to represent this: 4*uint8 for ip and uint32 for port
     tcp_addr:string;
     ipc_addr:string;
     // a human readable name, not used for id anything
@@ -33,6 +41,7 @@ table SyncBroadcast{
     type:SyncType;
     subscribers:[SubscriberInfo];
     servers:[ServerInfo];
+    clients:[ClientInfo];
 }
 
 root_type SyncBroadcast;

@@ -7,6 +7,7 @@
 #include "rum/common/log.h"
 #include "rum/common/misc.h"
 #include "rum/common/common.h"
+#include "node_id.h"
 
 #define TAG "RemoteManager"
 
@@ -16,7 +17,7 @@ namespace rum {
 
 std::string RemoteManager::NodeInfo::GetStrId(const void *sync_fb_p) {
     const auto *sync = (msg::SyncBroadcast *) sync_fb_p;
-    return to_string(sync->node()->pid()) + "::" + sync->node()->tcp_addr()->str();
+    return GetNodeStrId(sync->node()->pid(), sync->node()->tcp_addr()->str());
 }
 
 RemoteManager::NodeInfo::NodeInfo(const string &sync_fb) : sync_data(sync_fb) {

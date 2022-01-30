@@ -42,7 +42,7 @@ class ThreadPool {
 
     inline int threads();
 
-    inline void stop();
+    inline void stopAndWait();
 
     inline void stopAndClear();
 
@@ -147,7 +147,7 @@ int ThreadPool::threads() {
     return workers_.size();
 }
 
-void ThreadPool::stop() {
+void ThreadPool::stopAndWait() {
     {
         std::lock_guard<std::mutex> lock(queue_mutex_);
         if(stop_)
@@ -174,7 +174,7 @@ void ThreadPool::stopAndClear() {
 
 // the destructor joins all threads
 ThreadPool::~ThreadPool(){
-    stop();
+    stopAndWait();
 }
 
 }

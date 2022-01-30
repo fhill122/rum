@@ -52,6 +52,7 @@ class ImplTest : public ::testing::Test{
     virtual ~ImplTest() {
         // this is mandatory as ItcManager is global and contains all the history subs
         if (node_) node_->shutdown();
+        this_thread::sleep_for(10ms);
     }
 };
 
@@ -90,6 +91,12 @@ class ImplMultiTest : public ::testing::Test{
                         [](shared_ptr<const Message> &msg, const string&){return move(msg);}, kProtocol);
             }
         }
+    }
+
+    virtual ~ImplMultiTest() {
+        // this is mandatory as ItcManager is global and contains all the history subs
+        if (node_) node_->shutdown();
+        this_thread::sleep_for(10ms);
     }
 
 };
@@ -238,6 +245,65 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
     EXPECT_EQ(shared_ipc_count.load(), 100*2*kNSubs*kNTopics*kNPubs);
 }
 
+struct LongSubTask  : public ::testing::Test {
+    unique_ptr<NodeBaseImpl> node = make_unique<NodeBaseImpl>();
+    PublisherBaseImpl *pub;
+    vector<SubscriberBaseImpl*> subs;
+    atomic_int count{0};
+    static constexpr char kTopic[] = "SlowJob";
+    static constexpr char kProtocol[] = "";
+
+    LongSubTask() {
+        node->connect(GetMasterInAddr(), GetMasterOutAddr());
+        pub = node->addPublisher(kTopic, kProtocol);
+    }
+
+    virtual ~LongSubTask() {
+        if(node) node->shutdown();
+    }
+
+    void initSubs(int n){
+        shared_ptr<ThreadPool> tp = make_shared<ThreadPool>(1);
+        subs.resize(n);
+        for (int i = 0; i < n; ++i) {
+            subs[i] = node->addSubscriber(kTopic, tp, 100, nullptr,
+                    [&](const shared_ptr<const void> &){
+                        Log::I(__func__, "start job");
+                        this_thread::sleep_for(10ms);
+                        count.fetch_add(1);
+                        Log::I(__func__, "finish job");
+                    },
+                    nullptr, kProtocol);
+        }
+    }
+};
+
+TEST_F(LongSubTask, SingleTp){
+    initSubs(1);
+
+    for (int i = 0; i < 10; ++i) {
+        pub->scheduleItc(make_shared<string>("fdd"));
+    }
+    this_thread::sleep_for(1ms);
+
+    node->removeSubscriber(subs[0]);
+    EXPECT_EQ(count.load(), 1);
+}
+
+TEST_F(LongSubTask, SharedTp){
+    initSubs(2);
+
+    for (int i = 0; i < 10; ++i) {
+        pub->scheduleItc(make_shared<string>("fdd"));
+    }
+    this_thread::sleep_for(1ms);
+
+    node->removeSubscriber(subs[0]);
+    EXPECT_EQ(count.load(), 1);
+
+    node->removeSubscriber(subs[1]);
+    EXPECT_LE(count.load(), 2);
+}
 
 int main(int argc, char **argv){
     // zmq_force_delay = 50;
@@ -245,7 +311,7 @@ int main(int argc, char **argv){
     this_thread::sleep_for(10ms);
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();
-    rum::log.setLogLevel(Log::Destination::Std, Log::Level::w);
+    rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
     argv0 = argv[0];
 
     ::testing::InitGoogleTest(&argc, argv);

@@ -43,7 +43,7 @@ bool ItcManager::scheduleItc(const string &topic, const shared_ptr<const void> &
     if (itr==subs.end())
         return false;
 
-    auto sub_msg = make_shared<SubscriberBaseImpl::Msg>(msg, false, true);
+    auto sub_msg = make_shared<SubscriberBaseImpl::TopicItcMsg>(msg);
     for (auto *sub : itr->second){
         sub->enqueue(sub_msg);
     }
