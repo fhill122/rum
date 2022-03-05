@@ -1,0 +1,19 @@
+namespace rum.msg;  // yeah it is not camel case, bite me
+
+struct Ip{
+    ip0:uint8;
+    ip1:uint8;
+    ip2:uint8;
+    ip3:uint8;
+}
+
+struct TcpAddress{
+    // ip:[uint8:4];
+    ip:Ip;
+    port:int32;
+}
+
+struct CompactNodeId{
+    tcp_address:TcpAddress;
+    pid:int32;
+}

@@ -25,8 +25,10 @@ bool NodeBase::Init(const NodeParam &param) {
     return true;
 }
 
-std::unique_ptr<NodeBase> &NodeBase::GlobalNode() {
+std::unique_ptr<NodeBase> &NodeBase::GlobalNode(bool auto_init) {
     static unique_ptr<NodeBase> node;
+    if (auto_init)
+        Init();
     return node;
 }
 
@@ -41,9 +43,10 @@ NodeBase::addSubscriber(const std::string &topic,
                         size_t queue_size,
                         const IpcFunc &ipc_cb,
                         const ItcFunc &itc_cb,
-                        const DeserFunc &deserialize_f,
+                        const DeserFunc<> &deserialize_f,
                         const std::string &protocol) {
-    AssertLog(StrStartWith(topic, kTopicReserve), "reserved topic name");
+    AssertLog(!StrStartWith(topic, kTopicReserve), "reserved topic name");
+    AssertLog(tp->threads()>0, "empty thread pool");
     return SubscriberBaseHandler(pimpl_->addSubscriber(topic, tp, queue_size, ipc_cb, itc_cb, deserialize_f, protocol));
 }
 
@@ -54,13 +57,40 @@ void NodeBase::removeSubscriber(SubscriberBaseHandler &subscriber_handler) {
 
 PublisherBaseHandler NodeBase::addPublisher(const std::string &topic,
                                             const std::string &protocol) {
-    AssertLog(StrStartWith(topic, kTopicReserve), "reserved topic name");
+    AssertLog(!StrStartWith(topic, kTopicReserve), "reserved topic name");
     return PublisherBaseHandler(pimpl_->addPublisher(topic, protocol));
 }
 
 void NodeBase::removePublisher(PublisherBaseHandler &publisher_handler) {
     if (publisher_handler.pimpl_)
         pimpl_->removePublisher(publisher_handler.pimpl_);
+}
+
+ClientBaseHandler NodeBase::addClient(const string &srv_name, const string &req_protocol) {
+    AssertLog(!StrStartWith(srv_name, kTopicReserve), "reserved srv name");
+    return ClientBaseHandler(pimpl_->addClient(srv_name, req_protocol));
+}
+
+void NodeBase::removeClient(ClientBaseHandler &client_handler) {
+    if (client_handler.pimpl_)
+        pimpl_->removeClient(client_handler.pimpl_);
+}
+
+ServerBaseHandler NodeBase::addServer(const string &srv_name,
+                                      const shared_ptr<ThreadPool> &tp,
+                                      size_t queue_size,
+                                      const SrvIpcFunc &ipc_func,
+                                      const SrvItcFunc &itc_func,
+                                      const string &req_protocol,
+                                      const string &rep_protocol) {
+    AssertLog(!StrStartWith(srv_name, kTopicReserve), "reserved srv name");
+    return ServerBaseHandler(pimpl_->addServer(srv_name, tp, queue_size,
+                                               ipc_func, itc_func, req_protocol, rep_protocol));
+}
+
+void NodeBase::removeServer(ServerBaseHandler &server_handler) {
+    if (server_handler.pimpl_)
+        pimpl_->removeServer(server_handler.pimpl_);
 }
 
 }

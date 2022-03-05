@@ -12,20 +12,28 @@ namespace rum{
 class ServerBaseImpl {
 
   private:
-    // <topic, pub>
+  public:
+    // <cli_id, pub>
     std::unordered_map<std::string, PublisherBaseImpl*> pubs_;  RUM_LOCK_BY(pubs_mu_)
     std::mutex pubs_mu_;
     // we need a dummy response sub to setup syncs
-    SubscriberBaseImpl* sub_;
-    std::string service_name_;
-  public:
+    SubscriberBaseImpl* sub_ = nullptr;
+    // std::string service_name_;
+    const std::string pub_protocol_;
 
   private:
   public:
-    void ipcCallback();
+    explicit ServerBaseImpl(const std::string &pub_protocol) : pub_protocol_(pub_protocol) {}
+
+    inline void setSub(SubscriberBaseImpl *sub) {sub_ = sub;}
+
     ItcFunc genSubItc(const SrvItcFunc& srv_func);
     IpcFunc genSubIpc(const SrvIpcFunc& srv_func);
 
+    const std::string& srvName() const {return sub_->topic_;}
+
+    void addPub(PublisherBaseImpl* pub);
+    PublisherBaseImpl* removePub(const std::string &cli_id);
 };
 }
 

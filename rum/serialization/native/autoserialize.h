@@ -35,7 +35,7 @@ template<typename T>
 size_t AutoGetSerializationSize(const T &t) {
     if constexpr(std::is_base_of<HandwrittenSerialization, T>::value) {
         return t.getSerializationSize();
-    } else if constexpr(std::is_trivial<T>::value) {
+    } else if constexpr(std::is_trivially_copyable<T>::value) {
         return sizeof(T);
     } else {
         return GetSerializationSize(t);
@@ -51,7 +51,7 @@ template<typename T>
 void AutoSerialize(char *buffer, const T &t) {
     if constexpr(std::is_base_of<HandwrittenSerialization, T>::value) {
         t.serialize(buffer);
-    } else if constexpr(std::is_trivial<T>::value) {
+    } else if constexpr(std::is_trivially_copyable<T>::value) {
         char *t_ptr = (char *) (&t);
         std::copy(t_ptr, t_ptr + sizeof(T), buffer);
     } else {
@@ -70,7 +70,7 @@ template<typename T>
 void AutoDeserialize(const char *buffer, T &t) {
     if constexpr(std::is_base_of<HandwrittenSerialization, T>::value) {
         t.deserialize(buffer);
-    } else if constexpr(std::is_trivial<T>::value) {
+    } else if constexpr(std::is_trivially_copyable<T>::value) {
         std::copy(buffer, buffer + sizeof(T), (char *) (&t));
     } else {
         Deserialize(buffer, t);

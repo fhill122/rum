@@ -17,9 +17,10 @@ class SubscriberBaseHandler{
     friend NodeBase;
     SubscriberBaseImpl* pimpl_ = nullptr;
 
-  public:
-    inline SubscriberBaseHandler() = default;
+  protected:
     explicit SubscriberBaseHandler(SubscriberBaseImpl* pimpl);
+
+  public:
     inline virtual ~SubscriberBaseHandler() = default;
 };
 

@@ -11,6 +11,7 @@
 #include "rum/core/msg/rum_sync_generated.h"
 #include "rum/extern/ivtb/stopwatch.h"
 #include "rum/core/msg/util.h"
+#include "node_id.h"
 
 using namespace std;
 using namespace ivtb;
@@ -50,6 +51,7 @@ void NodeBaseImpl::updatePubConnection(const msg::NodeId *remote_node, RemoteMan
                 }
             };
 
+    // messages
     if (shouldConnectIpc(remote_node)){
         loopOp(update.topics_new,
                [](const vector<unique_ptr<PublisherBaseImpl>>& pubs, const msg::NodeId* node){
@@ -70,6 +72,27 @@ void NodeBaseImpl::updatePubConnection(const msg::NodeId *remote_node, RemoteMan
                    for (auto &pub : pubs) pub->disconnect(node->tcp_addr()->str());
                });
     }
+
+    // srvs
+    for (const auto &rep_topic : update.rep_topics_new){
+        auto srv_name = (string)SrvFromRepTopic(rep_topic);
+        auto itr = servers_.find(srv_name);
+        if (itr==servers_.end()) continue;
+        auto *server = itr->second.get();
+        // connected as well in this step
+        auto *pub = internalAddPublisher(rep_topic, server->pub_protocol_, msg::MsgType::MsgType_ServiceResponse);
+        server->addPub(pub);
+    }
+    for (const auto &rep_topic : update.rep_topics_removed){
+        auto srv_name = (string)SrvFromRepTopic(rep_topic);
+        auto itr = servers_.find(srv_name);
+        if (itr==servers_.end()) continue;
+        auto *server = itr->second.get();
+        auto *pub = server->removePub((string)IdFromRepTopic(rep_topic));
+        MapVecRemove(pubs_, pub->topic_, pub,
+                     [pub](const unique_ptr<PublisherBaseImpl> &p){return p.get()==pub;});
+    }
+
 }
 
 void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
@@ -86,31 +109,55 @@ void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
 }
 
 void NodeBaseImpl::syncFunc(){
-    flatbuffers::FlatBufferBuilder builder;
-    flatbuffers::Offset<msg::SyncBroadcast> sync_fb;
-    auto node_id = msg::CreateNodeIdDirect(builder, nid_, kPid,
-                                           sub_container_->getTcpAddr().c_str(),
-                                           sub_container_->getIpcAddr().c_str(),
-                                           name_.c_str());
+    using namespace flatbuffers;
 
-    // broadcast self sync info
     vector<flatbuffers::Offset<msg::SubscriberInfo>> subs_vect;
+    vector<flatbuffers::Offset<msg::SubscriberInfo>> clis_vect;
+    bool update_required = false;
+    // retrieve infos from sub_container_
     {
-        // do we need this lock? seems only reading could take place in parallel
         lock_guard<mutex> lock(sub_container_->subs_mu_);
-        subs_vect.reserve(sub_container_->subs_.size());
-        for (const auto &t : sub_container_->subs_){
-            subs_vect.push_back(msg::CreateSubscriberInfoDirect(builder,
-                        t.first.c_str(), (*t.second.begin())->protocol_.c_str()));
+        unsigned long sub_version = sub_container_->version_;
+
+        if (sub_version!=sync_fb_version_ || !sync_fb_builder_){
+            update_required = true;
+            sync_fb_version_ = sub_version;
+            sync_fb_builder_ = make_shared<FlatBufferBuilder>();
+
+            // subs_vect.reserve(sub_container_->subs_.size());
+            for (const auto &t : sub_container_->subs_){
+                if (IsRepTopic(t.first.c_str())){
+                    clis_vect.push_back(msg::CreateSubscriberInfoDirect(*sync_fb_builder_,
+                                t.first.c_str(), (*t.second.begin())->protocol_.c_str()));
+
+                } else{
+                    subs_vect.push_back(msg::CreateSubscriberInfoDirect(*sync_fb_builder_,
+                                t.first.c_str(), (*t.second.begin())->protocol_.c_str()));
+                }
+            }
         }
     }
-    sync_fb = msg::CreateSyncBroadcastDirect(builder, node_id,
-                            sync_version_.load(std::memory_order_acquire),
-                              msg::SyncType_Whole, &subs_vect, nullptr);
-    builder.Finish(sync_fb);
-    sync_pub_->publishIpc(zmq::message_t(builder.GetBufferPointer(), builder.GetSize()));
+
+    // fill other infos that require no sub_container_'s lock
+    if (update_required){
+        flatbuffers::Offset<msg::SyncBroadcast> sync_fb;
+        auto node_id = msg::CreateNodeIdDirect(*sync_fb_builder_, nid_, kPid,
+                                               sub_container_->getTcpAddr().c_str(),
+                                               sub_container_->getIpcAddr().c_str(),
+                                               name_.c_str());
+        sync_fb = msg::CreateSyncBroadcastDirect(*sync_fb_builder_, node_id, sync_fb_version_,
+                                                 msg::SyncType_Whole, &subs_vect, &clis_vect);
+        sync_fb_builder_->Finish(sync_fb);
+    }
+
+    // build and send the message
+    auto *builder_count_keep = new shared_ptr<FlatBufferBuilder>(sync_fb_builder_);
+    Message fb_msg{sync_fb_builder_->GetBufferPointer(), sync_fb_builder_->GetSize(),
+                   [](void*, void* builder_sptr){ delete (shared_ptr<FlatBufferBuilder>*)builder_sptr;},
+                   builder_count_keep};
+    sync_pub_->publishIpc(fb_msg);
     log.d(__func__, "broadcast sync once: %s",
-          ToString(msg::GetSyncBroadcast(builder.GetBufferPointer())).c_str());
+          ToString(msg::GetSyncBroadcast(sync_fb_builder_->GetBufferPointer())).c_str());
 }
 
 void NodeBaseImpl::checkRemote() {
@@ -121,6 +168,10 @@ void NodeBaseImpl::checkRemote() {
         update.topics_removed.reserve(sync->subscribers()->size());
         for (const auto *sub: *sync->subscribers()) {
             update.topics_removed.push_back(sub->topic()->str());
+        }
+        update.rep_topics_removed.reserve(sync->clients()->size());
+        for (const auto *cli: *sync->clients()) {
+            update.rep_topics_removed.push_back(cli->topic()->str());
         }
         updatePubConnection(sync->node(), update);
     }
@@ -145,14 +196,13 @@ SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
                             const shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
                             const IpcFunc &ipc_cb,
                             const ItcFunc &itc_cb,
-                            const DeserFunc &deserialize_f,
+                            const DeserFunc<> &deserialize_f,
                             const string &protocol) {
     auto sub = make_unique<SubscriberBaseImpl>(
             topic, tp, queue_size, ipc_cb, itc_cb, deserialize_f, protocol);
     auto *sub_raw = sub.get();
     bool new_topic = sub_container_->addSub(move(sub));
     if (new_topic){
-        sync_version_.fetch_add(1, memory_order_release);
         sync_scheduler_.cancel(sync_task_);
         sync_task_ = make_shared<Scheduler::Task>(*sync_task_);
         sync_scheduler_.schedule(sync_task_);
@@ -168,7 +218,6 @@ void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
     // remove sub from container
     bool topic_removed = sub_container_->removeSub(sub);
     if (topic_removed){
-        sync_version_.fetch_add(1, std::memory_order_release);
         sync_scheduler_.cancel(sync_task_);
         sync_task_ = make_shared<Scheduler::Task>(*sync_task_);
         sync_scheduler_.schedule(sync_task_);
@@ -176,31 +225,36 @@ void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
     sub = nullptr;
 }
 
-
-PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic,
-                                               const string &protocol) {
-    auto pub = make_unique<PublisherBaseImpl>(topic, protocol, context_);
+PublisherBaseImpl* NodeBaseImpl::internalAddPublisher(const string &topic,
+                                  const string &protocol, msg::MsgType msg_type) {
+    auto pub = make_unique<PublisherBaseImpl>(topic, protocol, context_, false, msg_type);
     auto *pub_raw =  pub.get();
+    std::unordered_map<std::string, std::vector<RemoteManager::NodeInfo*>> *book = &remote_manager_->sub_book;
 
-    // connect in single thread sync_tp_ to avoid locking for connect operation.
-    // it is ok to capture reference since we will wait the future.
-    auto connect_future = sync_tp_->enqueue([&]{
-        auto itr = remote_manager_->topic_book.find(topic);
-        if (itr!=remote_manager_->topic_book.end()){
-            for (const auto *node_info : itr->second){
-                const auto* sync_fb = node_info->getSyncFb();
-                if (shouldConnectIpc(sync_fb->node())){
-                    pub->connect(sync_fb->node()->ipc_addr()->str());
-                }else if (shouldConnectTcp(sync_fb->node())){
-                    pub->connect(sync_fb->node()->tcp_addr()->str());
-                }
+    auto itr = book->find(topic);
+    if (itr!=book->end()){
+        for (const auto *node_info : itr->second){
+            const auto* sync_fb = node_info->getSyncFb();
+            if (shouldConnectIpc(sync_fb->node())){
+                pub->connect(sync_fb->node()->ipc_addr()->str());
+            }else if (shouldConnectTcp(sync_fb->node())){
+                pub->connect(sync_fb->node()->tcp_addr()->str());
             }
         }
-        MapVecAdd(pubs_, topic, move(pub));
-    });
-    connect_future.wait();
-    this_thread::sleep_for(50ms);
+    }
+    MapVecAdd(pubs_, topic, move(pub));
+    return pub_raw;
+}
 
+PublisherBaseImpl * NodeBaseImpl::addPublisher(const string &topic, const string &protocol,
+                                               msg::MsgType msg_type) {
+    // connect in single thread sync_tp_ to avoid locking for connect operation.
+    // it is ok to capture reference since we will wait the future.
+    auto connect_future = sync_tp_->enqueue([&](){
+        return internalAddPublisher(topic, protocol, msg_type);
+    });
+    auto* pub_raw = connect_future.get();
+    this_thread::sleep_for(50ms);
     return pub_raw;
 }
 
@@ -217,27 +271,70 @@ void NodeBaseImpl::removePublisher(PublisherBaseImpl* &pub) {
 }
 
 ClientBaseImpl *NodeBaseImpl::addClient(const string &srv_name, const string &pub_protocol) {
-    auto *pub = addPublisher(kSrvReqTopicPrefix + srv_name, pub_protocol);
+    // todo ivan. can we pass pub,sub factory function to client constructor? or separate pub/sub creation from setup
+    auto node_str = GetNodeStrId(kPid, sub_container_->getTcpAddr());
+    auto cli_id = GetRepTopic(srv_name, node_str);
+    auto *pub = addPublisher(GetReqTopic(srv_name), pub_protocol, msg::MsgType_ServiceRequest);
+    pub->set_cli_id(cli_id);
     // itc or ipc will never be called
-    auto *sub = addSubscriber(kSrvRepTopicPrefix + srv_name, ClientBaseImpl::sub_dumb_tp_, 0,
+    auto *sub = addSubscriber(cli_id, ClientBaseImpl::sub_dumb_tp_, 0,
                               nullptr, nullptr, nullptr);
+    // todo ivan. shutdown will leak client.
     return new ClientBaseImpl(pub, sub);
 }
 
 void NodeBaseImpl::removeClient(ClientBaseImpl *&client) {
+    // todo ivan. doing here. sync issue?
     removeSubscriber(client->sub_);
     removePublisher(client->pub_);
+    delete client;
     client = nullptr;
 }
 
 ServerBaseImpl *NodeBaseImpl::addServer(const string &srv_name,
                                         const shared_ptr<ivtb::ThreadPool> &tp,
                                         size_t queue_size,
-                                        const SrvItcFunc &itc_func,
                                         const SrvIpcFunc &ipc_func,
+                                        const SrvItcFunc &itc_func,
                                         const string &sub_protocol,
                                         const string &pub_protocol) {
-    return nullptr;
+    // todo ivan. doing here
+    auto server = make_unique<ServerBaseImpl>(pub_protocol);
+    auto *server_raw = server.get();
+
+    auto server_add_future = sync_tp_->enqueue([&](){
+        auto itr = servers_.find(srv_name);
+        if (itr!=servers_.end()) return false;
+        servers_[srv_name] = move(server);
+        return true;
+    });
+    bool unique_server = server_add_future.get();
+    if(!unique_server){
+        printer.e("rum", "failed to add server %s as already exists", srv_name.c_str());
+        return nullptr;
+    }
+
+    auto *sub = addSubscriber(GetReqTopic(srv_name), tp, queue_size,
+                              server_raw->genSubIpc(ipc_func),
+                              server_raw->genSubItc(itc_func),
+                              nullptr, sub_protocol);
+    server_raw->setSub(sub);
+
+    return server_raw;
+}
+
+void NodeBaseImpl::removeServer(ServerBaseImpl *&server) {
+    // todo ivan. doing here
+    removeSubscriber(server->sub_);
+    for (auto& pair_itr : server->pubs_)
+        removePublisher(pair_itr.second);
+
+    auto server_remove_future = sync_tp_->enqueue([&](){
+        servers_.erase(server->srvName());
+    });
+    server_remove_future.wait();
+
+    server = nullptr;
 }
 
 void NodeBaseImpl::shutdown() {
@@ -262,6 +359,8 @@ void NodeBaseImpl::shutdown() {
 
     is_down_.store(true, memory_order_release);
     // log.w(__func__, "finished" );
+
+    // todo ivan. deal with server and client
 }
 
 void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_out) {
@@ -275,10 +374,8 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
     AssertLog(res1&&res2, "failed to connect to " + addr_in + " and " + addr_out);
     syncsub_container_->start();
 
-    if (param_.enable_tcp_socket){
-        bool tcp_binding = sub_container_->bindTcpRaw();
-        AssertLog(tcp_binding, "");
-    }
+    bool tcp_binding = sub_container_->bindTcpRaw();
+    AssertLog(tcp_binding, "");
     if (param_.enable_ipc_socket){
         bool ipc_binding = sub_container_->bindIpcRaw();
         AssertLog(ipc_binding, "");

@@ -8,10 +8,12 @@
 #include "rum/common/misc.h"
 #include "rum/common/common.h"
 #include "node_id.h"
+#include "srv_common.h"
 
 #define TAG "RemoteManager"
 
 using namespace std;
+using namespace flatbuffers;
 
 namespace rum {
 
@@ -42,6 +44,34 @@ std::shared_ptr<RemoteManager> &RemoteManager::GlobalManager() {
 }
 
 RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, size_t size) {
+    auto findDifference = [](
+            const flatbuffers::Vector<Offset<msg::SubscriberInfo>> *old_fb_subs,
+            const flatbuffers::Vector<Offset<msg::SubscriberInfo>> *new_fb_subs,
+            vector<string> &topics_new,
+            vector<string> &topics_removed){
+        set<std::string> old_subs;
+        set<std::string> new_subs;
+
+        for (auto sub: *(old_fb_subs)) {
+            old_subs.insert(sub->topic()->str());
+        }
+        for (auto sub: *(new_fb_subs)) {
+            new_subs.insert(sub->topic()->str());
+        }
+
+        topics_new.resize(new_subs.size());
+        auto it_added = set_difference(new_subs.begin(), new_subs.end(),
+                                       old_subs.begin(), old_subs.end(),
+                                       topics_new.begin());
+        topics_new.resize(it_added - topics_new.begin());
+
+        topics_removed.resize(old_subs.size());
+        auto it_removed = set_difference(old_subs.begin(), old_subs.end(),
+                                         new_subs.begin(), new_subs.end(),
+                                         topics_removed.begin());
+        topics_removed.resize(it_removed - topics_removed.begin());
+    };
+
     NodeUpdate update;
     const auto *sync = msg::GetSyncBroadcast(fb_data);
     AssertLog(sync->type() == msg::SyncType_Whole, "");
@@ -49,54 +79,52 @@ RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, si
     auto node_str = NodeInfo::GetStrId(sync);
     auto itr = remote_book.find(node_str);
     NodeInfo *node_p;
+    // new node
     if (itr == remote_book.end()) {
         auto new_node = make_unique<NodeInfo>(string((char *) fb_data, size));
         node_p = new_node.get();
         remote_book[node_str] = move(new_node);
         update.topics_new.reserve(sync->subscribers()->size());
+        update.rep_topics_new.reserve(sync->clients()->size());
         // uniqueness is guaranteed
         for (const auto *sub: *sync->subscribers()) {
             update.topics_new.push_back(sub->topic()->str());
         }
-    } else {
+        for (const auto *cli: *sync->clients()) {
+            update.rep_topics_new.push_back(cli->topic()->str());
+        }
+    }
+    // exist node
+    else {
         node_p = itr->second.get();
         node_p->observe();
         const auto *old_sync = itr->second->getSyncFb();
         if (old_sync->version() == sync->version()) return update;
 
-        set<std::string> old_subs;
-        set<std::string> new_subs;
-
-        for (auto sub: *(old_sync->subscribers())) {
-            old_subs.insert(sub->topic()->str());
-        }
-        for (auto sub: *(sync->subscribers())) {
-            new_subs.insert(sub->topic()->str());
-        }
-
-        update.topics_new.resize(new_subs.size());
-        auto it_added = set_difference(new_subs.begin(), new_subs.end(),
-                                       old_subs.begin(), old_subs.end(),
-                                       update.topics_new.begin());
-        update.topics_new.resize(it_added - update.topics_new.begin());
-
-        update.topics_removed.resize(old_subs.size());
-        auto it_removed = set_difference(old_subs.begin(), old_subs.end(),
-                                         new_subs.begin(), new_subs.end(),
-                                         update.topics_removed.begin());
-        update.topics_removed.resize(it_removed - update.topics_removed.begin());
+        findDifference(old_sync->subscribers(), sync->subscribers(),
+                       update.topics_new, update.topics_removed);
+        findDifference(old_sync->clients(), sync->clients(),
+                       update.rep_topics_new, update.rep_topics_removed);
 
         itr->second->sync_data = string((char *) fb_data, size);
     }
 
-    // update topic book
+    // update sub_book and cli_book
     for (const auto &t: update.topics_new) {
-        MapVecAdd(topic_book, t, (NodeInfo *) {node_p});
+        MapVecAdd(sub_book, t, (NodeInfo *)node_p);
     }
     for (const auto &t: update.topics_removed) {
-        MapVecRemove(topic_book, t, node_p,
+        MapVecRemove(sub_book, t, node_p,
                      [node_p](NodeInfo *n) { return n == node_p; });
     }
+    for (const auto &t: update.rep_topics_new) {
+        MapVecAdd(sub_book, t, (NodeInfo *)node_p);
+    }
+    for (const auto &t: update.rep_topics_removed) {
+        MapVecRemove(sub_book, t, node_p,
+                     [node_p](NodeInfo *n) { return n == node_p; });
+    }
+
     return update;
 }
 
@@ -117,7 +145,11 @@ std::vector<std::string> RemoteManager::checkAndRemove() {
         const auto *sync = id_node_pair.second->getSyncFb();
         auto *node_p = id_node_pair.second.get();
         for (auto *sub : *sync->subscribers()){
-            MapVecRemove(topic_book, sub->topic()->str(), node_p,
+            MapVecRemove(sub_book, sub->topic()->str(), node_p,
+                         [node_p](NodeInfo *n){return n==node_p;} );
+        }
+        for (auto *cli : *sync->clients()){
+            MapVecRemove(sub_book, cli->topic()->str(), node_p,
                          [node_p](NodeInfo *n){return n==node_p;} );
         }
     }

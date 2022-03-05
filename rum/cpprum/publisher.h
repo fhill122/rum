@@ -1,5 +1,4 @@
 //
-// todo ivan. think about the api, should publisher base taken a void instead of message
 // Created by Ivan B on 2021/4/8.
 //
 
@@ -7,6 +6,7 @@
 #define RUM_RUM_PUBLISHER_H_
 
 #include <rum/core/publisher_base_handler.h>
+#include <rum/core/node_base.h>
 #include <rum/serialization/serializer.h>
 #include <rum/common/log.h>
 #include <memory>
@@ -41,8 +41,12 @@ class Publisher : public PublisherBaseHandler{
 
   public:
     Publisher(PublisherBaseHandler &&base, SerFunc<MsgT> ser_func) :
-            PublisherBaseHandler(std::move(base)), ser_func_(std::move(ser_func)){}
+            PublisherBaseHandler(base), ser_func_(std::move(ser_func)){}
     Publisher() : PublisherBaseHandler(nullptr){};
+    Publisher(const Publisher&) = delete;
+    Publisher& operator=(const Publisher&) = delete;
+    Publisher(Publisher &&other) = delete;
+    Publisher& operator=(Publisher &&other) = delete;
 
     ~Publisher() override{
         NodeBase::GlobalNode()->removePublisher(*this);

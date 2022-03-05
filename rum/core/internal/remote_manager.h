@@ -22,6 +22,8 @@ struct RemoteManager {
     struct NodeUpdate{
         std::vector<std::string> topics_new;
         std::vector<std::string> topics_removed;
+        std::vector<std::string> rep_topics_new;
+        std::vector<std::string> rep_topics_removed;
     };
 
 
@@ -50,7 +52,7 @@ struct RemoteManager {
     // <StrId, NodeInfo>
     std::unordered_map<std::string, std::unique_ptr<NodeInfo>> remote_book;
     // <topic, NodeInfo>
-    std::unordered_map<std::string, std::vector<NodeInfo*>> topic_book;
+    std::unordered_map<std::string, std::vector<NodeInfo*>> sub_book;
 
     static std::shared_ptr<RemoteManager>& GlobalManager();
 

@@ -13,7 +13,7 @@
 #include "rum/extern/zmq/zmq.hpp"
 #include "rum/serialization/serializer.h"
 #include "../msg/rum_header_generated.h"
-#include "awaiting_result.h"
+#include "srv_common.h"
 
 namespace rum {
 
@@ -57,10 +57,10 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
             std::shared_ptr<Message> request = nullptr;
             std::string protocol;
             unsigned int id;
-            std::string pub_topic;
+            std::string client_id;
             Content(const std::shared_ptr<Message> &request,const std::string &a_protocol,
-                    unsigned int id,const std::string &pub_topic)
-                    : request(request), protocol(a_protocol), id(id), pub_topic(pub_topic) {}
+                    unsigned int id,const std::string &client_id)
+                    : request(request), protocol(a_protocol), id(id), client_id(client_id) {}
         };
 
         std::shared_ptr<const Content> msg;
@@ -86,7 +86,7 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
 
     IpcFunc ipc_callback_;
     ItcFunc itc_callback_;
-    DeserFunc deserialize_f_;
+    DeserFunc<> deserialize_f_;
     const bool single_t_;
 
     std::function<void()> destr_callback_;  RUM_LOCK_BY(destr_mu_)
@@ -94,7 +94,6 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
   public:
     const std::string topic_;
     const std::string protocol_;
-    const msg::MsgType msg_type_;
 
   private:
   protected:
@@ -110,7 +109,7 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
     SubscriberBaseImpl(std::string topic, const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
                        IpcFunc ipc_cb,
                        ItcFunc itc_cb,
-                       DeserFunc deserialize_f,
+                       DeserFunc<> deserialize_f,
                        std::string protocol = "",
                        msg::MsgType msg_type = msg::MsgType::MsgType_Message);
 

@@ -31,13 +31,15 @@ class NodeBaseImpl {
     std::unique_ptr<SubContainer> syncsub_container_;
     std::unique_ptr<PublisherBaseImpl> sync_pub_;
     std::unordered_map<std::string, std::vector<std::unique_ptr<PublisherBaseImpl>>> pubs_;
+    std::unordered_map<std::string, std::unique_ptr<ServerBaseImpl>> servers_;
     // all sync work is enqueued on this single thread tp to make sure thread safe
     std::shared_ptr<ivtb::ThreadPool> sync_tp_ = std::make_shared<ivtb::ThreadPool>(1);
 
     // thread to broadcast sync, include heartbeat
     ivtb::Scheduler sync_scheduler_{0};
     std::shared_ptr<ivtb::Scheduler::Task> sync_task_;
-    std::atomic<unsigned long> sync_version_{0};
+    std::shared_ptr<flatbuffers::FlatBufferBuilder> sync_fb_builder_ = nullptr;
+    unsigned long sync_fb_version_ = 0;
     std::atomic<bool> is_down_{false};
 
     std::vector<std::string> connections_;
@@ -51,10 +53,13 @@ class NodeBaseImpl {
   private:
     void updatePubConnection(const msg::NodeId *remote_node, RemoteManager::NodeUpdate &update);
     void syncCb(const zmq::message_t& msg);
+    // broadcast self sync info
     void syncFunc();
     void checkRemote();
     bool shouldConnectIpc(const msg::NodeId *sync) const;
     bool shouldConnectTcp(const msg::NodeId *sync) const;
+    PublisherBaseImpl* internalAddPublisher(
+            const std::string &topic, const std::string &protocol, msg::MsgType msg_type); RUM_THREAD_UNSAFE
 
 
   public:
@@ -66,12 +71,13 @@ class NodeBaseImpl {
                   const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
                   const IpcFunc &ipc_cb,
                   const ItcFunc &itc_cb,
-                  const DeserFunc &deserialize_f,
+                  const DeserFunc<> &deserialize_f,
                   const std::string &protocol = ""); RUM_THREAD_SAFE
 
     void removeSubscriber(SubscriberBaseImpl* &sub); RUM_THREAD_SAFE
 
-    PublisherBaseImpl* addPublisher(const std::string &topic, const std::string &protocol); RUM_THREAD_SAFE
+    PublisherBaseImpl* addPublisher(const std::string &topic, const std::string &protocol,
+                                    msg::MsgType msg_type = msg::MsgType_Message); RUM_THREAD_SAFE
 
     void removePublisher(PublisherBaseImpl* &pub); RUM_THREAD_SAFE
 
@@ -81,10 +87,12 @@ class NodeBaseImpl {
 
     ServerBaseImpl* addServer(const std::string &srv_name,
                               const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
-                              const SrvItcFunc &itc_func,
                               const SrvIpcFunc &ipc_func,
+                              const SrvItcFunc &itc_func,
                               const std::string &sub_protocol = "",
-                              const std::string &pub_protocol = "");
+                              const std::string &pub_protocol = "");  RUM_THREAD_SAFE
+
+    void removeServer(ServerBaseImpl* &server);  RUM_THREAD_SAFE
 
     // todo ivan. should we ever call it? especially for rumassembly modules
     void shutdown();

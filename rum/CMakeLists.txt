@@ -21,6 +21,8 @@ add_library(rumcore SHARED
 
     core/publisher_base_handler.cc
     core/subscriber_base_handler.cc
+    core/server_base_handler.cc
+    core/client_base_handler.cc
     core/node_base.cc
 
     extern/zmq/zmq.hpp
@@ -35,6 +37,8 @@ add_library(cpprum SHARED
     cpprum/rum.h
     cpprum/subscriber.h
     cpprum/publisher.h
+    cpprum/server.h
+    cpprum/client.h
 )
 set_target_properties(cpprum PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(cpprum rumcore)

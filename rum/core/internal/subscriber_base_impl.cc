@@ -46,16 +46,13 @@ SubscriberBaseImpl::SubscriberBaseImpl(std::string topic,
         const std::shared_ptr<ThreadPool> &tp, const size_t queue_size,
         IpcFunc ipc_cb,
         ItcFunc itc_cb,
-        DeserFunc deserialize_f,
+        DeserFunc<> deserialize_f,
         string protocol,
         msg::MsgType msg_type)
         : topic_(move(topic)), protocol_(move(protocol)), tp_(tp), queue_size_(queue_size),
           ipc_callback_(move(ipc_cb)), itc_callback_(move(itc_cb)), deserialize_f_(move(deserialize_f)),
-          single_t_(tp->threads()==1), msg_type_(msg_type){
-    assert(tp->threads()>0);
-}
+          single_t_(tp->threads()==1){}
 
-// todo ivan. doing here. make sure all tasks are finished
 SubscriberBaseImpl::~SubscriberBaseImpl() {
     lock_guard<mutex> lock(destr_mu_);
     if (destr_callback_) destr_callback_();
@@ -69,6 +66,7 @@ void SubscriberBaseImpl::enqueue(const shared_ptr<SubMsg> &msg) {
         lock_guard lock(queue_mu_);
         msg_q_.push(msg);
         if (queue_size_>0 && msg_q_.size()>queue_size_){
+            // todo ivan. drop action
             msg_q_.pop();
         }
     }

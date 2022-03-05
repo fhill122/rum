@@ -42,12 +42,15 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
 
         // todo ivan. doing here. how to make sure safe removal? sub removed, long ongoing task is still here, when pub called it could be a null
         std::shared_ptr<Message> rep_message;
-        bool ok = srv_func(static_pointer_cast<const Message>(request->request), request->protocol, rep_message);
-        AssertLog(!request->pub_topic.empty(), "");
+        auto request_message = static_pointer_cast<const Message>(request->request);
+        bool ok = srv_func(request_message, request->protocol, rep_message);
+        AssertLog(!request->client_id.empty(), "");
         lock_guard lock(pubs_mu_);
-        auto itr = pubs_.find(request->pub_topic);
+        auto itr = pubs_.find(request->client_id);
         if (itr==pubs_.end()){
             // request is faster than sync, pub not created yet
+            // todo ivan. wait? quick end instead of letting client wait?
+            log.w(srvName(), "request is faster than sync, pub not created yet");
             return;
         }
         if (ok){
@@ -56,6 +59,22 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
             itr->second->publishRepIpc(request->id, 1, *rep_message);
         }
     };
+}
+
+void ServerBaseImpl::addPub(PublisherBaseImpl* pub) {
+    lock_guard lock(pubs_mu_);
+    auto itr = pubs_.find(pub->cli_id());
+    AssertLog(itr==pubs_.end(), "");
+    pubs_[pub->topic_] = pub;
+}
+
+PublisherBaseImpl *ServerBaseImpl::removePub(const std::string &cli_id) {
+    lock_guard lock(pubs_mu_);
+    auto itr = pubs_.find(cli_id);
+    AssertLog(itr!=pubs_.end(), "");
+    auto *pub = itr->second;
+    pubs_.erase(itr);
+    return pub;
 }
 
 }

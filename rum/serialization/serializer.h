@@ -11,23 +11,30 @@
 
 namespace rum {
 
+// todo ivan. allow other version of SubFunc and SrvFunc, e.g. taking reference
+
 template<typename T>
 using SubFunc = std::function<void(const std::shared_ptr<const T>&)>;
 // void is actually the type that DeserFunc converts to
 using IpcFunc = std::function<void(const std::shared_ptr<const void>&)>;
 // void is actually the type of scheduled itc object
 using ItcFunc = std::function<void(const std::shared_ptr<const void>&)>;
+template<typename T=void>
 using DeserFunc = std::function<
-        std::shared_ptr<const void> (std::shared_ptr<const Message>&, const std::string&) >;
-template<typename T>
+        std::shared_ptr<const T> (std::shared_ptr<const Message>&, const std::string&) >;
+template<typename T=void>
 using SerFunc = std::function<
         std::unique_ptr<Message> (const std::shared_ptr<const T>&) >;
+template<typename T>
+using ItcFactoryFunc = std::function<std::shared_ptr<const T>(const std::shared_ptr<const void>&)>;
 
+// SubT, PubT
 template<typename Q, typename P>
 using SrvFunc = std::function<bool(const std::shared_ptr<const Q>& request, std::shared_ptr<P>& response)>;
-using SrvItcFunc = std::function<bool(const std::shared_ptr<const void>& request, std::shared_ptr<void>& response)>;
-using SrvIpcFunc = std::function<
-        bool(const std::shared_ptr<const Message>& request, const std::string& req_protocol, std::shared_ptr<Message>& response) >;
+using SrvItcFunc = std::function<bool(std::shared_ptr<const void>& request,
+                                      std::shared_ptr<void>& response)>;
+using SrvIpcFunc = std::function<bool(std::shared_ptr<const Message>& request,
+                   const std::string& req_protocol, std::shared_ptr<Message>& response) >;
 
 template<typename S>
 class Serializer {
@@ -60,32 +67,61 @@ class Serializer {
         return ((S*)this)-> template deserialize<T>(msg_in, protocol);
     }
 
-    /**
-     * Generate itc callback given user input callback, for most cases they are same
-     * @tparam SubT User provided callback object type
-     * @param callback_f User provided callback function
-     * @return Itc callback function that is invoked on published objet
-     */
+    // convert from pub type to sub type
     template<typename SubT>
-    ItcFunc generateItcCallback(const SubFunc<SubT> &callback_f) const{
-        return ((S*)this) -> template generateItcCallback<SubT>(callback_f);
+    std::shared_ptr<const SubT> itcTypeConvert(const std::shared_ptr<const void>& msg) const{
+        // check if this function is overridden
+        if constexpr (&S::template itcTypeConvert<SubT> == &Serializer<S>::itcTypeConvert<SubT>)
+            return std::static_pointer_cast<const SubT>(msg);
+        else
+            return ((S*)this)-> template itcTypeConvert<SubT>(msg);
+    }
+
+    // convert from deserialized type to sub type. would ever override it?
+    template<typename SubT>
+    std::shared_ptr<const SubT> ipcTypeConvert(const std::shared_ptr<const void>& msg) const{
+        // check if this function is overridden
+        if constexpr (&S::template ipcTypeConvert<SubT> == &Serializer<S>::ipcTypeConvert<SubT>)
+            return std::static_pointer_cast<const SubT>(msg);
+        else
+            return ((S*)this)-> template ipcTypeConvert<SubT>(msg);
     }
 
     /**
-     * Generate ipc callback given user input callback, for most cases they are same
-     * @tparam SubT User provided callback object type
-     * @param callback_f User provided callback function
-     * @return Ipc callback function that is invoked on deserialized object
+     * Get protocol
+     * @return Protocol
      */
-    template<typename SubT>
-    IpcFunc generateIpcCallback(const SubFunc<SubT> &callback_f) const{
-        return ((S*)this) -> template generateIpcCallback<SubT>(callback_f);
-    }
-
     static std::string Protocol(){
         return S::Protocol();
     }
 };
+
+template<typename ReqT, typename RepT, class ReqSerializerT, class RepSerializerT>
+bool SrvIpcCallback(const Serializer<ReqSerializerT> &req_serializer,
+                    const Serializer<RepSerializerT> &rep_serializer,
+                    const SrvFunc<ReqT, RepT> &callback_f,
+                    std::shared_ptr<const Message>& request, const std::string& req_protocol,
+                    std::shared_ptr<Message>& response){
+    auto req_void = req_serializer.template deserialize<ReqT>(request, req_protocol);
+    // we require RepT default constructor exist
+    auto rep_obj = std::make_shared<RepT>();
+    bool ok = callback_f(req_serializer.template ipcTypeConvert<ReqT>(req_void), rep_obj);
+    if(ok){
+        response = rep_serializer.template serialize<RepT>(std::const_pointer_cast<const RepT>(rep_obj));
+    }
+    return ok;
+}
+
+template<typename ReqT, typename RepT, class ReqSerializerT>
+bool SrvItcCallback(const Serializer<ReqSerializerT> &req_serializer,
+                    const SrvFunc<ReqT, RepT> &callback_f,
+                    std::shared_ptr<const void>& request, std::shared_ptr<void>& response){
+    // we require RepT default constructor exist
+    auto rep_obj = std::make_shared<RepT>();
+    bool ok = callback_f(req_serializer.template itcTypeConvert<ReqT>(request), rep_obj);
+    response = std::move(rep_obj);
+    return ok;
+}
 
 }
 

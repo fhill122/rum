@@ -229,7 +229,7 @@ class Log {
         GlobalLogger()->eErrno(tag, content, args...);
     }
 
-    static void AssertFailure(const char* expr_str, const char* file, int line, std::string msg){
+    static void AssertFailure(const char* expr_str, const char* file, int line, const std::string &msg){
         GlobalLogger()->logString("AssertFailure", "\n"
                 "Message:\t" + msg + "\n"
                 "Expect:\t" + expr_str + "\n"
@@ -312,10 +312,18 @@ void Log::logString(const std::string& tag, const std::string& content, Level le
     }
 
     auto t = std::chrono::system_clock::now();
-    string s = getTimeStr(t)+"|" + level_str + "|" + tag + ":\t" + content;
+    string t_sr = getTimeStr(t);
+    string log_string = getTimeStr(t);
+    log_string.reserve(log_string.size()+tag.size()+content.size()+6);
+    log_string += "|";
+    log_string += level_str;
+    log_string += "|";
+    log_string += tag;
+    log_string += ":\t";
+    log_string += content;
 
     if (level>=min_std_level_)
-        fprintf(dest, "%s%s%s\n", pre.c_str(), s.c_str() ,suf.c_str());
+        fprintf(dest, "%s%s%s\n", pre.c_str(), log_string.c_str() ,suf.c_str());
 
     if (level>=min_file_level_){
         lock_guard<mutex> lock(file_mu_);
@@ -332,7 +340,7 @@ void Log::logString(const std::string& tag, const std::string& content, Level le
             ++part_n_;
         }
 
-        *file_ << s << "\n";
+        *file_ << log_string << "\n";
         file_->flush();
     }
 

@@ -123,7 +123,6 @@ bool SubContainer::getMsg(zmq::message_t &header, zmq::message_t &body) {
     return false;
 }
 
-// todo ivan. doing here. we have to make sure that when removing sub, we could wait until all ongoing callbacks are finished
 bool SubContainer::loop() {
     zmq::message_t header;
     auto body = make_shared<zmq::message_t>();
@@ -169,22 +168,29 @@ bool SubContainer::loop() {
             log.d(TAG, "unknown srv: %s", header_fb->name()->c_str());
             return true;
         }
+        AssertLog(header_fb->extra_type()==msg::ExtraInfo_ReqInfo, "");
+        auto *req_info = header_fb->extra_as_ReqInfo();
         auto sub_msg = make_shared<SubscriberBaseImpl::SrvIpcRequest>(move(body), header_fb->protocal()->str(),
-                                      header_fb->request()->id(), header_fb->request()->rep_topic()->str());
+                                                                      req_info->id(), req_info->client_id()->str());
         AssertLog(itr->second.size()==1, "multiple local services");
         itr->second[0]->enqueue(sub_msg);
     }
     // for srv response, we do all the work here.
     else if (header_fb->type() == msg::MsgType_ServiceResponse){
         lock_guard lock(ClientBaseImpl::wait_list_mu_);
-        auto itr = ClientBaseImpl::wait_list_.find(header_fb->response()->id());
+        AssertLog(header_fb->extra_type()==msg::ExtraInfo_RepInfo, "");
+        auto *rep_info = header_fb->extra_as_RepInfo();
+        auto itr = ClientBaseImpl::wait_list_.find(rep_info->id());
         if (itr == ClientBaseImpl::wait_list_.end()){
             // already timed out
         } else{
+            auto rep = make_shared<pair<shared_ptr<Message>, string>>();
+            rep->first = move(body);
+            rep->second = header_fb->protocal()->str();
             {
                 lock_guard result_lock(itr->second->mu);
-                itr->second->response = move(body);
-                if (header_fb->response()->status()==0){
+                itr->second->response = move(rep);
+                if (rep_info->status()==0){
                     itr->second->status = SrvStatus::OK;
                 } else{
                     itr->second->status = SrvStatus::ServerErr;
@@ -219,15 +225,15 @@ bool SubContainer::addSub(unique_ptr<SubscriberBaseImpl> sub_uptr) {
     auto itr = MapVecAdd(subs_, topic, move(sub));
     if (itr!=subs_.end()){
         AssertLog(protocol == itr->second[0]->protocol_,
-                  "Adding subscriber of " + sub->protocol_ + " with different protocol");
+                  "Adding subscriber with different protocol");
         return false;
     }
     else{
+        ++version_;
         return true;
     }
 }
 
-// todo ivan. doing here, though sub is removed, could be ongoing callback still in background?
 bool SubContainer::removeSub(SubscriberBaseImpl *sub) {
     shared_ptr<SubscriberBaseImpl> sub_sptr;
     bool topic_removed;
@@ -236,13 +242,14 @@ bool SubContainer::removeSub(SubscriberBaseImpl *sub) {
         // move sub from subs_
         tie(topic_removed, sub_sptr) = MapVecMove(subs_, sub->topic_, sub,
                           [sub](const shared_ptr<SubscriberBaseImpl> &obj){return sub==obj.get();});
+        if (topic_removed) ++version_;
     }
     weak_ptr<SubscriberBaseImpl> sub_wptr = sub_sptr;
     // release ownership of tp so tp destroy will not happen after callback in tp threads
     sub_sptr->clearAndReleaseTp();
     // destroy(possible) sub here without lock
     sub_sptr.reset();
-    // this is ugly but adds little extra work to sub callback
+    // make sure all ongoing callbacks are finished. This approach is ugly but adds little extra work to sub callback
     while(!sub_wptr.expired()){
         this_thread::sleep_for(1ms);
     }

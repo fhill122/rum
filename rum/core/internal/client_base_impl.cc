@@ -18,14 +18,25 @@ ClientBaseImpl::ClientBaseImpl(PublisherBaseImpl* pub, SubscriberBaseImpl* sub):
 
 unique_ptr<AwaitingResult>
 ClientBaseImpl::callIpc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
+    auto awaiting_result = sendIpc(move(req_msg));
+    waitIpc(awaiting_result.get(), timeout_ms);
+    return awaiting_result;
+}
+
+std::unique_ptr<AwaitingResult> ClientBaseImpl::sendIpc(std::unique_ptr<Message> req_msg) {
     auto awaiting_result = make_unique<AwaitingResult>();
     {
         lock_guard lock(wait_list_mu_);
         wait_list_.emplace(awaiting_result->id, awaiting_result.get());
     }
 
-    pub_->publishReqIpc(awaiting_result->id, sub_->topic_, *req_msg);
+    // unlike itc, we do not check pub's connection here, as it would be checked before this call to prevent
+    // unnecessary serialization
+    pub_->publishReqIpc(awaiting_result->id, *req_msg);
+    return awaiting_result;
+}
 
+void ClientBaseImpl::waitIpc(AwaitingResult *awaiting_result, unsigned int timeout_ms) {
     // wait until got result or timeout
     bool got_result = true;
     unique_lock result_lock(awaiting_result->mu);
@@ -34,7 +45,8 @@ ClientBaseImpl::callIpc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
     } else{
         // gcc bug before gcc10? https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41861
         got_result = awaiting_result->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms),
-                                    [&awaiting_result](){return awaiting_result->response != nullptr;});
+            [&awaiting_result](){
+                return awaiting_result->response!=nullptr || awaiting_result->status==SrvStatus::Cancelled;});
     }
 
     // erase only if timeout to reduce lock
@@ -50,16 +62,28 @@ ClientBaseImpl::callIpc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
         if (awaiting_result->status == SrvStatus::OK)
             AssertLog(awaiting_result->response, "ok but null");
     }
-
-    return awaiting_result;
 }
 
 shared_ptr<AwaitingResult>
 ClientBaseImpl::callItc(const shared_ptr<const void> &req_obj, unsigned int timeout_ms) {
+    auto awaiting_result = sendItc(req_obj);
+    waitItc(awaiting_result.get(), timeout_ms);
+    return awaiting_result;
+}
+
+std::shared_ptr<AwaitingResult> ClientBaseImpl::sendItc(const shared_ptr<const void> &req_obj) {
     auto awaiting_result = make_shared<AwaitingResult>(0);
     awaiting_result->request = req_obj;
     // no need to add to wait_list
-    pub_->scheduleItc(awaiting_result);
+    bool scheduled = pub_->scheduleItc(awaiting_result);
+    if (!scheduled){
+        awaiting_result->status = SrvStatus::NoConnections;
+    }
+    return awaiting_result;
+}
+
+void ClientBaseImpl::waitItc(AwaitingResult* awaiting_result, unsigned int timeout_ms) {
+    if (awaiting_result->status == SrvStatus::NoConnections) return;
 
     // wait until got result or timeout
     bool got_result = true;
@@ -69,7 +93,8 @@ ClientBaseImpl::callItc(const shared_ptr<const void> &req_obj, unsigned int time
     } else{
         // gcc bug before gcc10? https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41861
         got_result = awaiting_result->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms),
-                                                  [&awaiting_result](){return awaiting_result->response != nullptr;});
+            [&awaiting_result](){
+                return awaiting_result->response!=nullptr || awaiting_result->status==SrvStatus::Cancelled;});
     }
 
     if (!got_result){
@@ -79,8 +104,14 @@ ClientBaseImpl::callItc(const shared_ptr<const void> &req_obj, unsigned int time
         if (awaiting_result->status == SrvStatus::OK)
             AssertLog(awaiting_result->response, "ok but null");
     }
+}
 
-    return awaiting_result;
+bool ClientBaseImpl::Cancel(AwaitingResult &awaiting) {
+    lock_guard lock(awaiting.mu);
+    if (awaiting.status!=SrvStatus::OK) return false;
+    awaiting.status = SrvStatus::Cancelled;
+    awaiting.cv.notify_one();
+    return true;
 }
 
 }

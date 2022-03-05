@@ -110,12 +110,13 @@ bool PublisherBaseImpl::publishIpc(zmq::message_t &body){
     return publishIpc(header, body);
 }
 
-bool PublisherBaseImpl::publishReqIpc(unsigned int id, const std::string &rep_topic, zmq::message_t &body) {
+bool PublisherBaseImpl::publishReqIpc(unsigned int id, zmq::message_t &body) {
     AssertLog(msg_type_ == msg::MsgType_ServiceRequest, "");
+    AssertLog(!cli_id_.empty(), "");
     auto* header_builder = new flatbuffers::FlatBufferBuilder();
-    auto req_info_fb = msg::CreateReqInfoDirect(*header_builder, rep_topic.c_str(), id);
+    auto req_info_fb = msg::CreateReqInfoDirect(*header_builder, cli_id_.c_str(), id);
     auto header_fb = msg::CreateMsgHeaderDirect(*header_builder, msg::MsgType_ServiceRequest,
-                                                topic_.c_str(), protocol_.c_str(), req_info_fb, 0);
+                            topic_.c_str(), protocol_.c_str(), msg::ExtraInfo_ReqInfo, req_info_fb.Union());
     header_builder->Finish(header_fb);
     zmq::message_t msg_header_(header_builder->GetBufferPointer(), header_builder->GetSize(),
         [](void *, void* builder){
@@ -130,7 +131,7 @@ bool PublisherBaseImpl::publishRepIpc(unsigned int id, char status, zmq::message
     auto* header_builder = new flatbuffers::FlatBufferBuilder();
     auto rep_info_fb = msg::CreateRepInfo(*header_builder, status, id);
     auto header_fb = msg::CreateMsgHeaderDirect(*header_builder, msg::MsgType_ServiceResponse,
-                                                topic_.c_str(), protocol_.c_str(), 0, rep_info_fb);
+                            topic_.c_str(), protocol_.c_str(), msg::ExtraInfo_RepInfo, rep_info_fb.Union());
 
     header_builder->Finish(header_fb);
     zmq::message_t msg_header_(header_builder->GetBufferPointer(), header_builder->GetSize(),

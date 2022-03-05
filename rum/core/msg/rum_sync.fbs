@@ -12,18 +12,6 @@ table SubscriberInfo{
     protocol:string;
 }
 
-table ServerInfo{
-    name:string;
-    request_protocol:string;
-    response_protocol:string;
-}
-
-table ClientInfo{
-    name:string;
-    request_protocol:string;
-    response_protocol:string;
-}
-
 table NodeId{
     nid:int32;
     pid:int32;
@@ -39,9 +27,10 @@ table SyncBroadcast{
     node:NodeId;
     version:uint64;
     type:SyncType;
+    // include normal topic subscribers and server subscribers
     subscribers:[SubscriberInfo];
-    servers:[ServerInfo];
-    clients:[ClientInfo];
+    // for per client subscribers
+    clients:[SubscriberInfo];
 }
 
 root_type SyncBroadcast;

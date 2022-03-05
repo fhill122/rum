@@ -12,6 +12,8 @@
 #include "rum/serialization/serializer.h"
 #include "subscriber_base_handler.h"
 #include "publisher_base_handler.h"
+#include "server_base_handler.h"
+#include "client_base_handler.h"
 
 namespace rum {
 
@@ -28,9 +30,7 @@ class NodeBase {
 
   public:
     static bool Init(const NodeParam &param = NodeParam());
-
-    static std::unique_ptr<NodeBase>& GlobalNode();
-
+    static std::unique_ptr<NodeBase>& GlobalNode(bool auto_init = false);
 
     virtual ~NodeBase();
 
@@ -38,7 +38,7 @@ class NodeBase {
         const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
         const IpcFunc &ipc_cb,
         const ItcFunc &itc_cb,
-        const DeserFunc &deserialize_f,
+        const DeserFunc<> &deserialize_f,
         const std::string &protocol);
 
     void removeSubscriber(SubscriberBaseHandler &subscriber_handler);
@@ -47,6 +47,18 @@ class NodeBase {
 
     void removePublisher(PublisherBaseHandler &publisher_handler);
 
+    ClientBaseHandler addClient(const std::string &srv_name, const std::string &req_protocol);
+
+    void removeClient(ClientBaseHandler &client_handler);
+
+    ServerBaseHandler addServer(const std::string &srv_name,
+                                const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
+                                const SrvIpcFunc &ipc_func,
+                                const SrvItcFunc &itc_func,
+                                const std::string &req_protocol,
+                                const std::string &rep_protocol);
+
+    void removeServer(ServerBaseHandler &server_handler);
 };
 
 }

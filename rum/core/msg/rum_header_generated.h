@@ -6,6 +6,8 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#include "rum_common_generated.h"
+
 namespace rum {
 namespace msg {
 
@@ -54,22 +56,70 @@ inline const char *EnumNameMsgType(MsgType e) {
   return EnumNamesMsgType()[index];
 }
 
+enum ExtraInfo {
+  ExtraInfo_NONE = 0,
+  ExtraInfo_ReqInfo = 1,
+  ExtraInfo_RepInfo = 2,
+  ExtraInfo_MIN = ExtraInfo_NONE,
+  ExtraInfo_MAX = ExtraInfo_RepInfo
+};
+
+inline const ExtraInfo (&EnumValuesExtraInfo())[3] {
+  static const ExtraInfo values[] = {
+    ExtraInfo_NONE,
+    ExtraInfo_ReqInfo,
+    ExtraInfo_RepInfo
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesExtraInfo() {
+  static const char * const names[4] = {
+    "NONE",
+    "ReqInfo",
+    "RepInfo",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameExtraInfo(ExtraInfo e) {
+  if (flatbuffers::IsOutRange(e, ExtraInfo_NONE, ExtraInfo_RepInfo)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesExtraInfo()[index];
+}
+
+template<typename T> struct ExtraInfoTraits {
+  static const ExtraInfo enum_value = ExtraInfo_NONE;
+};
+
+template<> struct ExtraInfoTraits<rum::msg::ReqInfo> {
+  static const ExtraInfo enum_value = ExtraInfo_ReqInfo;
+};
+
+template<> struct ExtraInfoTraits<rum::msg::RepInfo> {
+  static const ExtraInfo enum_value = ExtraInfo_RepInfo;
+};
+
+bool VerifyExtraInfo(flatbuffers::Verifier &verifier, const void *obj, ExtraInfo type);
+bool VerifyExtraInfoVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
+
 struct ReqInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef ReqInfoBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_REP_TOPIC = 4,
+    VT_CLIENT_ID = 4,
     VT_ID = 6
   };
-  const flatbuffers::String *rep_topic() const {
-    return GetPointer<const flatbuffers::String *>(VT_REP_TOPIC);
+  const flatbuffers::String *client_id() const {
+    return GetPointer<const flatbuffers::String *>(VT_CLIENT_ID);
   }
   uint32_t id() const {
     return GetField<uint32_t>(VT_ID, 0);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_REP_TOPIC) &&
-           verifier.VerifyString(rep_topic()) &&
+           VerifyOffset(verifier, VT_CLIENT_ID) &&
+           verifier.VerifyString(client_id()) &&
            VerifyField<uint32_t>(verifier, VT_ID) &&
            verifier.EndTable();
   }
@@ -79,8 +129,8 @@ struct ReqInfoBuilder {
   typedef ReqInfo Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_rep_topic(flatbuffers::Offset<flatbuffers::String> rep_topic) {
-    fbb_.AddOffset(ReqInfo::VT_REP_TOPIC, rep_topic);
+  void add_client_id(flatbuffers::Offset<flatbuffers::String> client_id) {
+    fbb_.AddOffset(ReqInfo::VT_CLIENT_ID, client_id);
   }
   void add_id(uint32_t id) {
     fbb_.AddElement<uint32_t>(ReqInfo::VT_ID, id, 0);
@@ -99,22 +149,22 @@ struct ReqInfoBuilder {
 
 inline flatbuffers::Offset<ReqInfo> CreateReqInfo(
     flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> rep_topic = 0,
+    flatbuffers::Offset<flatbuffers::String> client_id = 0,
     uint32_t id = 0) {
   ReqInfoBuilder builder_(_fbb);
   builder_.add_id(id);
-  builder_.add_rep_topic(rep_topic);
+  builder_.add_client_id(client_id);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<ReqInfo> CreateReqInfoDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    const char *rep_topic = nullptr,
+    const char *client_id = nullptr,
     uint32_t id = 0) {
-  auto rep_topic__ = rep_topic ? _fbb.CreateString(rep_topic) : 0;
+  auto client_id__ = client_id ? _fbb.CreateString(client_id) : 0;
   return rum::msg::CreateReqInfo(
       _fbb,
-      rep_topic__,
+      client_id__,
       id);
 }
 
@@ -176,8 +226,8 @@ struct MsgHeader FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_TYPE = 4,
     VT_NAME = 6,
     VT_PROTOCAL = 8,
-    VT_REQUEST = 10,
-    VT_RESPONSE = 12
+    VT_EXTRA_TYPE = 10,
+    VT_EXTRA = 12
   };
   rum::msg::MsgType type() const {
     return static_cast<rum::msg::MsgType>(GetField<int8_t>(VT_TYPE, 0));
@@ -188,11 +238,18 @@ struct MsgHeader FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::String *protocal() const {
     return GetPointer<const flatbuffers::String *>(VT_PROTOCAL);
   }
-  const rum::msg::ReqInfo *request() const {
-    return GetPointer<const rum::msg::ReqInfo *>(VT_REQUEST);
+  rum::msg::ExtraInfo extra_type() const {
+    return static_cast<rum::msg::ExtraInfo>(GetField<uint8_t>(VT_EXTRA_TYPE, 0));
   }
-  const rum::msg::RepInfo *response() const {
-    return GetPointer<const rum::msg::RepInfo *>(VT_RESPONSE);
+  const void *extra() const {
+    return GetPointer<const void *>(VT_EXTRA);
+  }
+  template<typename T> const T *extra_as() const;
+  const rum::msg::ReqInfo *extra_as_ReqInfo() const {
+    return extra_type() == rum::msg::ExtraInfo_ReqInfo ? static_cast<const rum::msg::ReqInfo *>(extra()) : nullptr;
+  }
+  const rum::msg::RepInfo *extra_as_RepInfo() const {
+    return extra_type() == rum::msg::ExtraInfo_RepInfo ? static_cast<const rum::msg::RepInfo *>(extra()) : nullptr;
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -201,13 +258,20 @@ struct MsgHeader FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(name()) &&
            VerifyOffset(verifier, VT_PROTOCAL) &&
            verifier.VerifyString(protocal()) &&
-           VerifyOffset(verifier, VT_REQUEST) &&
-           verifier.VerifyTable(request()) &&
-           VerifyOffset(verifier, VT_RESPONSE) &&
-           verifier.VerifyTable(response()) &&
+           VerifyField<uint8_t>(verifier, VT_EXTRA_TYPE) &&
+           VerifyOffset(verifier, VT_EXTRA) &&
+           VerifyExtraInfo(verifier, extra(), extra_type()) &&
            verifier.EndTable();
   }
 };
+
+template<> inline const rum::msg::ReqInfo *MsgHeader::extra_as<rum::msg::ReqInfo>() const {
+  return extra_as_ReqInfo();
+}
+
+template<> inline const rum::msg::RepInfo *MsgHeader::extra_as<rum::msg::RepInfo>() const {
+  return extra_as_RepInfo();
+}
 
 struct MsgHeaderBuilder {
   typedef MsgHeader Table;
@@ -222,11 +286,11 @@ struct MsgHeaderBuilder {
   void add_protocal(flatbuffers::Offset<flatbuffers::String> protocal) {
     fbb_.AddOffset(MsgHeader::VT_PROTOCAL, protocal);
   }
-  void add_request(flatbuffers::Offset<rum::msg::ReqInfo> request) {
-    fbb_.AddOffset(MsgHeader::VT_REQUEST, request);
+  void add_extra_type(rum::msg::ExtraInfo extra_type) {
+    fbb_.AddElement<uint8_t>(MsgHeader::VT_EXTRA_TYPE, static_cast<uint8_t>(extra_type), 0);
   }
-  void add_response(flatbuffers::Offset<rum::msg::RepInfo> response) {
-    fbb_.AddOffset(MsgHeader::VT_RESPONSE, response);
+  void add_extra(flatbuffers::Offset<void> extra) {
+    fbb_.AddOffset(MsgHeader::VT_EXTRA, extra);
   }
   explicit MsgHeaderBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -245,13 +309,13 @@ inline flatbuffers::Offset<MsgHeader> CreateMsgHeader(
     rum::msg::MsgType type = rum::msg::MsgType_Interrupt,
     flatbuffers::Offset<flatbuffers::String> name = 0,
     flatbuffers::Offset<flatbuffers::String> protocal = 0,
-    flatbuffers::Offset<rum::msg::ReqInfo> request = 0,
-    flatbuffers::Offset<rum::msg::RepInfo> response = 0) {
+    rum::msg::ExtraInfo extra_type = rum::msg::ExtraInfo_NONE,
+    flatbuffers::Offset<void> extra = 0) {
   MsgHeaderBuilder builder_(_fbb);
-  builder_.add_response(response);
-  builder_.add_request(request);
+  builder_.add_extra(extra);
   builder_.add_protocal(protocal);
   builder_.add_name(name);
+  builder_.add_extra_type(extra_type);
   builder_.add_type(type);
   return builder_.Finish();
 }
@@ -261,8 +325,8 @@ inline flatbuffers::Offset<MsgHeader> CreateMsgHeaderDirect(
     rum::msg::MsgType type = rum::msg::MsgType_Interrupt,
     const char *name = nullptr,
     const char *protocal = nullptr,
-    flatbuffers::Offset<rum::msg::ReqInfo> request = 0,
-    flatbuffers::Offset<rum::msg::RepInfo> response = 0) {
+    rum::msg::ExtraInfo extra_type = rum::msg::ExtraInfo_NONE,
+    flatbuffers::Offset<void> extra = 0) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
   auto protocal__ = protocal ? _fbb.CreateString(protocal) : 0;
   return rum::msg::CreateMsgHeader(
@@ -270,8 +334,37 @@ inline flatbuffers::Offset<MsgHeader> CreateMsgHeaderDirect(
       type,
       name__,
       protocal__,
-      request,
-      response);
+      extra_type,
+      extra);
+}
+
+inline bool VerifyExtraInfo(flatbuffers::Verifier &verifier, const void *obj, ExtraInfo type) {
+  switch (type) {
+    case ExtraInfo_NONE: {
+      return true;
+    }
+    case ExtraInfo_ReqInfo: {
+      auto ptr = reinterpret_cast<const rum::msg::ReqInfo *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case ExtraInfo_RepInfo: {
+      auto ptr = reinterpret_cast<const rum::msg::RepInfo *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    default: return true;
+  }
+}
+
+inline bool VerifyExtraInfoVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types) {
+  if (!values || !types) return !values && !types;
+  if (values->size() != types->size()) return false;
+  for (flatbuffers::uoffset_t i = 0; i < values->size(); ++i) {
+    if (!VerifyExtraInfo(
+        verifier,  values->Get(i), types->GetEnum<ExtraInfo>(i))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 inline const rum::msg::MsgHeader *GetMsgHeader(const void *buf) {

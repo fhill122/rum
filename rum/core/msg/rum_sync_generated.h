@@ -12,12 +12,6 @@ namespace msg {
 struct SubscriberInfo;
 struct SubscriberInfoBuilder;
 
-struct ServerInfo;
-struct ServerInfoBuilder;
-
-struct ClientInfo;
-struct ClientInfoBuilder;
-
 struct NodeId;
 struct NodeIdBuilder;
 
@@ -121,166 +115,6 @@ inline flatbuffers::Offset<SubscriberInfo> CreateSubscriberInfoDirect(
       _fbb,
       topic__,
       protocol__);
-}
-
-struct ServerInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef ServerInfoBuilder Builder;
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_NAME = 4,
-    VT_REQUEST_PROTOCOL = 6,
-    VT_RESPONSE_PROTOCOL = 8
-  };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
-  }
-  const flatbuffers::String *request_protocol() const {
-    return GetPointer<const flatbuffers::String *>(VT_REQUEST_PROTOCOL);
-  }
-  const flatbuffers::String *response_protocol() const {
-    return GetPointer<const flatbuffers::String *>(VT_RESPONSE_PROTOCOL);
-  }
-  bool Verify(flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_NAME) &&
-           verifier.VerifyString(name()) &&
-           VerifyOffset(verifier, VT_REQUEST_PROTOCOL) &&
-           verifier.VerifyString(request_protocol()) &&
-           VerifyOffset(verifier, VT_RESPONSE_PROTOCOL) &&
-           verifier.VerifyString(response_protocol()) &&
-           verifier.EndTable();
-  }
-};
-
-struct ServerInfoBuilder {
-  typedef ServerInfo Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
-    fbb_.AddOffset(ServerInfo::VT_NAME, name);
-  }
-  void add_request_protocol(flatbuffers::Offset<flatbuffers::String> request_protocol) {
-    fbb_.AddOffset(ServerInfo::VT_REQUEST_PROTOCOL, request_protocol);
-  }
-  void add_response_protocol(flatbuffers::Offset<flatbuffers::String> response_protocol) {
-    fbb_.AddOffset(ServerInfo::VT_RESPONSE_PROTOCOL, response_protocol);
-  }
-  explicit ServerInfoBuilder(flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  ServerInfoBuilder &operator=(const ServerInfoBuilder &);
-  flatbuffers::Offset<ServerInfo> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<ServerInfo>(end);
-    return o;
-  }
-};
-
-inline flatbuffers::Offset<ServerInfo> CreateServerInfo(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::String> request_protocol = 0,
-    flatbuffers::Offset<flatbuffers::String> response_protocol = 0) {
-  ServerInfoBuilder builder_(_fbb);
-  builder_.add_response_protocol(response_protocol);
-  builder_.add_request_protocol(request_protocol);
-  builder_.add_name(name);
-  return builder_.Finish();
-}
-
-inline flatbuffers::Offset<ServerInfo> CreateServerInfoDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    const char *name = nullptr,
-    const char *request_protocol = nullptr,
-    const char *response_protocol = nullptr) {
-  auto name__ = name ? _fbb.CreateString(name) : 0;
-  auto request_protocol__ = request_protocol ? _fbb.CreateString(request_protocol) : 0;
-  auto response_protocol__ = response_protocol ? _fbb.CreateString(response_protocol) : 0;
-  return rum::msg::CreateServerInfo(
-      _fbb,
-      name__,
-      request_protocol__,
-      response_protocol__);
-}
-
-struct ClientInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef ClientInfoBuilder Builder;
-  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_NAME = 4,
-    VT_REQUEST_PROTOCOL = 6,
-    VT_RESPONSE_PROTOCOL = 8
-  };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
-  }
-  const flatbuffers::String *request_protocol() const {
-    return GetPointer<const flatbuffers::String *>(VT_REQUEST_PROTOCOL);
-  }
-  const flatbuffers::String *response_protocol() const {
-    return GetPointer<const flatbuffers::String *>(VT_RESPONSE_PROTOCOL);
-  }
-  bool Verify(flatbuffers::Verifier &verifier) const {
-    return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_NAME) &&
-           verifier.VerifyString(name()) &&
-           VerifyOffset(verifier, VT_REQUEST_PROTOCOL) &&
-           verifier.VerifyString(request_protocol()) &&
-           VerifyOffset(verifier, VT_RESPONSE_PROTOCOL) &&
-           verifier.VerifyString(response_protocol()) &&
-           verifier.EndTable();
-  }
-};
-
-struct ClientInfoBuilder {
-  typedef ClientInfo Table;
-  flatbuffers::FlatBufferBuilder &fbb_;
-  flatbuffers::uoffset_t start_;
-  void add_name(flatbuffers::Offset<flatbuffers::String> name) {
-    fbb_.AddOffset(ClientInfo::VT_NAME, name);
-  }
-  void add_request_protocol(flatbuffers::Offset<flatbuffers::String> request_protocol) {
-    fbb_.AddOffset(ClientInfo::VT_REQUEST_PROTOCOL, request_protocol);
-  }
-  void add_response_protocol(flatbuffers::Offset<flatbuffers::String> response_protocol) {
-    fbb_.AddOffset(ClientInfo::VT_RESPONSE_PROTOCOL, response_protocol);
-  }
-  explicit ClientInfoBuilder(flatbuffers::FlatBufferBuilder &_fbb)
-        : fbb_(_fbb) {
-    start_ = fbb_.StartTable();
-  }
-  ClientInfoBuilder &operator=(const ClientInfoBuilder &);
-  flatbuffers::Offset<ClientInfo> Finish() {
-    const auto end = fbb_.EndTable(start_);
-    auto o = flatbuffers::Offset<ClientInfo>(end);
-    return o;
-  }
-};
-
-inline flatbuffers::Offset<ClientInfo> CreateClientInfo(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    flatbuffers::Offset<flatbuffers::String> name = 0,
-    flatbuffers::Offset<flatbuffers::String> request_protocol = 0,
-    flatbuffers::Offset<flatbuffers::String> response_protocol = 0) {
-  ClientInfoBuilder builder_(_fbb);
-  builder_.add_response_protocol(response_protocol);
-  builder_.add_request_protocol(request_protocol);
-  builder_.add_name(name);
-  return builder_.Finish();
-}
-
-inline flatbuffers::Offset<ClientInfo> CreateClientInfoDirect(
-    flatbuffers::FlatBufferBuilder &_fbb,
-    const char *name = nullptr,
-    const char *request_protocol = nullptr,
-    const char *response_protocol = nullptr) {
-  auto name__ = name ? _fbb.CreateString(name) : 0;
-  auto request_protocol__ = request_protocol ? _fbb.CreateString(request_protocol) : 0;
-  auto response_protocol__ = response_protocol ? _fbb.CreateString(response_protocol) : 0;
-  return rum::msg::CreateClientInfo(
-      _fbb,
-      name__,
-      request_protocol__,
-      response_protocol__);
 }
 
 struct NodeId FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -394,8 +228,7 @@ struct SyncBroadcast FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_VERSION = 6,
     VT_TYPE = 8,
     VT_SUBSCRIBERS = 10,
-    VT_SERVERS = 12,
-    VT_CLIENTS = 14
+    VT_CLIENTS = 12
   };
   const rum::msg::NodeId *node() const {
     return GetPointer<const rum::msg::NodeId *>(VT_NODE);
@@ -409,11 +242,8 @@ struct SyncBroadcast FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>> *subscribers() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>> *>(VT_SUBSCRIBERS);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<rum::msg::ServerInfo>> *servers() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<rum::msg::ServerInfo>> *>(VT_SERVERS);
-  }
-  const flatbuffers::Vector<flatbuffers::Offset<rum::msg::ClientInfo>> *clients() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<rum::msg::ClientInfo>> *>(VT_CLIENTS);
+  const flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>> *clients() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>> *>(VT_CLIENTS);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -424,9 +254,6 @@ struct SyncBroadcast FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_SUBSCRIBERS) &&
            verifier.VerifyVector(subscribers()) &&
            verifier.VerifyVectorOfTables(subscribers()) &&
-           VerifyOffset(verifier, VT_SERVERS) &&
-           verifier.VerifyVector(servers()) &&
-           verifier.VerifyVectorOfTables(servers()) &&
            VerifyOffset(verifier, VT_CLIENTS) &&
            verifier.VerifyVector(clients()) &&
            verifier.VerifyVectorOfTables(clients()) &&
@@ -450,10 +277,7 @@ struct SyncBroadcastBuilder {
   void add_subscribers(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>>> subscribers) {
     fbb_.AddOffset(SyncBroadcast::VT_SUBSCRIBERS, subscribers);
   }
-  void add_servers(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::ServerInfo>>> servers) {
-    fbb_.AddOffset(SyncBroadcast::VT_SERVERS, servers);
-  }
-  void add_clients(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::ClientInfo>>> clients) {
+  void add_clients(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>>> clients) {
     fbb_.AddOffset(SyncBroadcast::VT_CLIENTS, clients);
   }
   explicit SyncBroadcastBuilder(flatbuffers::FlatBufferBuilder &_fbb)
@@ -474,12 +298,10 @@ inline flatbuffers::Offset<SyncBroadcast> CreateSyncBroadcast(
     uint64_t version = 0,
     rum::msg::SyncType type = rum::msg::SyncType_Add,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>>> subscribers = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::ServerInfo>>> servers = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::ClientInfo>>> clients = 0) {
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<rum::msg::SubscriberInfo>>> clients = 0) {
   SyncBroadcastBuilder builder_(_fbb);
   builder_.add_version(version);
   builder_.add_clients(clients);
-  builder_.add_servers(servers);
   builder_.add_subscribers(subscribers);
   builder_.add_node(node);
   builder_.add_type(type);
@@ -492,18 +314,15 @@ inline flatbuffers::Offset<SyncBroadcast> CreateSyncBroadcastDirect(
     uint64_t version = 0,
     rum::msg::SyncType type = rum::msg::SyncType_Add,
     const std::vector<flatbuffers::Offset<rum::msg::SubscriberInfo>> *subscribers = nullptr,
-    const std::vector<flatbuffers::Offset<rum::msg::ServerInfo>> *servers = nullptr,
-    const std::vector<flatbuffers::Offset<rum::msg::ClientInfo>> *clients = nullptr) {
+    const std::vector<flatbuffers::Offset<rum::msg::SubscriberInfo>> *clients = nullptr) {
   auto subscribers__ = subscribers ? _fbb.CreateVector<flatbuffers::Offset<rum::msg::SubscriberInfo>>(*subscribers) : 0;
-  auto servers__ = servers ? _fbb.CreateVector<flatbuffers::Offset<rum::msg::ServerInfo>>(*servers) : 0;
-  auto clients__ = clients ? _fbb.CreateVector<flatbuffers::Offset<rum::msg::ClientInfo>>(*clients) : 0;
+  auto clients__ = clients ? _fbb.CreateVector<flatbuffers::Offset<rum::msg::SubscriberInfo>>(*clients) : 0;
   return rum::msg::CreateSyncBroadcast(
       _fbb,
       node,
       version,
       type,
       subscribers__,
-      servers__,
       clients__);
 }
 

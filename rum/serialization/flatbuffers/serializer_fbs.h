@@ -5,26 +5,30 @@
 #ifndef RUM_SERIALIZATION_FLATBUFFERS_SERIALIZER_FBS_H_
 #define RUM_SERIALIZATION_FLATBUFFERS_SERIALIZER_FBS_H_
 
+// not necessary the rum included flatbuffers
+#include <flatbuffers/flatbuffers.h>
+
 #include "rum/serialization/serializer.h"
-#include "flatbuffers/flatbuffers.h"
 
 namespace rum {
+
+using FbsBuilder = flatbuffers::FlatBufferBuilder;
 
 class SerializerFbs : public Serializer<SerializerFbs> {
 
     static void DestroyData(void *data, void *builder_p){
         // decrease shared_ptr count
-        delete (std::shared_ptr<const flatbuffers::FlatBufferBuilder>*)builder_p;
+        delete (std::shared_ptr<const FbsBuilder>*)builder_p;
     }
 
   public:
 
     // always publish the builder, no other types
-    template<class T =  flatbuffers::FlatBufferBuilder>
+    template<class T =  FbsBuilder>
     std::unique_ptr<Message>
-    serialize(const std::shared_ptr<const flatbuffers::FlatBufferBuilder> &builder) const {
+    serialize(const std::shared_ptr<const FbsBuilder> &builder) const {
         // to achieve zero-copy, we extend the life of builder beyond this function
-        auto *builder_cpy = new std::shared_ptr<const flatbuffers::FlatBufferBuilder>(builder);
+        auto *builder_cpy = new std::shared_ptr<const FbsBuilder>(builder);
         return std::make_unique<Message>((*builder_cpy)->GetBufferPointer(),
             (*builder_cpy)->GetSize(), &SerializerFbs::DestroyData, builder_cpy);
     }
@@ -37,32 +41,19 @@ class SerializerFbs : public Serializer<SerializerFbs> {
     }
 
     // always subscribe with Message, as this is the only way to copy flatbuffers objects
-
     template<typename SubT = Message>
-    ItcFunc generateItcCallback(const SubFunc<SubT> &callback_f) const{
-        return [callback_f](const std::shared_ptr<const void>& msg){
-            auto *builder_cpy = new std::shared_ptr<const flatbuffers::FlatBufferBuilder>(
-                    std::static_pointer_cast<const flatbuffers::FlatBufferBuilder>(msg) );
-
-            // create a message from builder data and prolong builder life
-            auto message = std::make_shared<Message>(
-                    (*builder_cpy)->GetBufferPointer(), (*builder_cpy)->GetSize(),
-                    &SerializerFbs::DestroyData, builder_cpy);
-            callback_f(message);
-        };
-    }
-
-    template<typename SubT = Message>
-    IpcFunc generateIpcCallback(const SubFunc<SubT> &callback_f) const{
-        return [callback_f](const std::shared_ptr<const void>& msg){
-            callback_f(std::static_pointer_cast<const Message>(msg));
-        };
+    std::shared_ptr<const SubT> itcTypeConvert(const std::shared_ptr<const void>& msg) const{
+        auto *builder_cpy = new std::shared_ptr<const FbsBuilder>(
+                std::static_pointer_cast<const FbsBuilder>(msg) );
+        // create a message from builder data and prolong builder life
+        return std::make_shared<Message>(
+                (*builder_cpy)->GetBufferPointer(), (*builder_cpy)->GetSize(),
+                &SerializerFbs::DestroyData, builder_cpy);
     }
 
     static std::string Protocol() {
         return "fbs";
     }
-
 };
 
 }

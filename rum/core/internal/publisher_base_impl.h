@@ -14,6 +14,7 @@
 
 namespace rum {
 
+// todo ivan. should we create derived classes for req and rep publisher?
 class PublisherBaseImpl {
   private:
     const std::shared_ptr<zmq::context_t> context_;
@@ -23,6 +24,7 @@ class PublisherBaseImpl {
     const bool to_bind_;
     std::mutex zmq_mu_;
     zmq::message_t topic_header_;
+    std::string cli_id_;
 
     // the reason conn_list_ is not guarded by zmq_mu_ is to speed up frequent sync connection check
     std::unordered_set<std::string> conn_list_;
@@ -58,7 +60,7 @@ class PublisherBaseImpl {
     bool publishIpc(zmq::message_t &body);
     bool publishIpc(zmq::message_t &&body){ return publishIpc(body);}
     // srv
-    bool publishReqIpc(unsigned int id, const std::string &rep_topic, zmq::message_t &body);
+    bool publishReqIpc(unsigned int id, zmq::message_t &body);
     bool publishRepIpc(unsigned int id, char status, zmq::message_t &body);
 
     bool scheduleItc(const std::shared_ptr<const void> &msg);
@@ -66,6 +68,11 @@ class PublisherBaseImpl {
     static int send(zmq::socket_t &socket, zmq::message_t &message, bool wait);
 
     void setDestrCallback(const std::function<void()> &destr_callback);
+
+    inline const std::string& cli_id() {return cli_id_;};
+
+    inline void set_cli_id(const std::string &cli_id) {cli_id_ = cli_id;}
+
 };
 
 }

@@ -120,5 +120,112 @@ inline bool StrStartWith(const std::string &full, const std::string &head){
     return strncmp(full.c_str(), head.c_str(), head.size()) == 0;
 }
 
+inline bool StrStartWith(const char *full, const char *head){
+    return strncmp(full, head, strlen(head)) == 0;
+}
+
+/*
+ * string concatenation attempt.
+ * weird result in mac m1, all these are just slower. also: reserve then append is slower than just append
+ */
+
+/*
+// just slow as well
+inline size_t StrViewCatGetSize(std::string_view s){
+    return s.size();
+}
+
+template<typename... Args>
+inline size_t StrViewCatGetSize(std::string_view s1, Args... args){
+    return s1.size() + StrViewCatGetSize(args...);
+}
+
+inline void StrViewCatAppend(std::string &out, std::string_view s1){
+    out.append(s1);
+}
+
+template<typename... Args>
+inline void StrViewCatAppend(std::string &out, std::string_view s1, Args... args){
+    out.append(s1);
+    StrViewCatAppend(out, args...);
+}
+
+template<typename... Args>
+inline std::string StrViewCat2(std::string_view s1, Args... args){
+    std::string out;
+    out.reserve(StrViewCatGetSize(s1, args...));
+    StrViewCatAppend(out, s1, args...);
+    return out;
+}
+
+// just slow as well
+// https://stackoverflow.com/a/18899027
+template<typename>
+struct string_size_impl;
+
+template<size_t N>
+struct string_size_impl<const char[N]> {
+    static constexpr size_t size(const char (&) [N]) { return N - 1; }
+};
+
+template<size_t N>
+struct string_size_impl<char[N]> {
+    static size_t size(char (&s) [N]) { return N ? strlen(s) : 0; }
+};
+
+template<>
+struct string_size_impl<const char*> {
+    static size_t size(const char* s) { return s ? strlen(s) : 0; }
+};
+
+template<>
+struct string_size_impl<char*> {
+    static size_t size(char* s) { return s ? strlen(s) : 0; }
+};
+
+template<>
+struct string_size_impl<std::string> {
+    static size_t size(const std::string& s) { return s.size(); }
+};
+
+template<typename String> size_t string_size(String&& s) {
+    using noref_t = typename std::remove_reference<String>::type;
+    using string_t = typename std::conditional<std::is_array<noref_t>::value,
+                                               noref_t,
+                                               typename std::remove_cv<noref_t>::type
+    >::type;
+    return string_size_impl<string_t>::size(s);
+}
+
+template<typename...>
+struct concatenate_impl;
+
+template<typename String>
+struct concatenate_impl<String> {
+    static size_t size(String&& s) { return string_size(s); }
+    static void concatenate(std::string& result, String&& s) { result += s; }
+};
+
+template<typename String, typename... Rest>
+struct concatenate_impl<String, Rest...> {
+    static size_t size(String&& s, Rest&&... rest) {
+        return string_size(s)
+                + concatenate_impl<Rest...>::size(std::forward<Rest>(rest)...);
+    }
+    static void concatenate(std::string& result, String&& s, Rest&&... rest) {
+        result += s;
+        concatenate_impl<Rest...>::concatenate(result, std::forward<Rest>(rest)...);
+    }
+};
+
+template<typename... Strings>
+std::string concatenate(Strings&&... strings) {
+    std::string result;
+    result.reserve(concatenate_impl<Strings...>::size(std::forward<Strings>(strings)...));
+    concatenate_impl<Strings...>::concatenate(result, std::forward<Strings>(strings)...);
+    return result;
+}
+*/
+
 }
 #endif //RUM_COMMON_MISC_H_

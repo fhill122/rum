@@ -44,6 +44,7 @@ class SubContainer {
     std::mutex subs_mu_;
     // std::mutex topics_mu_;
     SubBook subs_; RUM_LOCK_BY(subs_mu_)
+    unsigned long version_=0; RUM_LOCK_BY(subs_mu_)
 
     std::unique_ptr<std::thread> loop_t_;
 

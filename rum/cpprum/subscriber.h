@@ -18,6 +18,10 @@ class Subscriber : public SubscriberBaseHandler{
 
     explicit Subscriber(SubscriberBaseHandler &&base) : SubscriberBaseHandler(std::move(base)) {}
     Subscriber() : SubscriberBaseHandler(nullptr){};
+    Subscriber(const Subscriber&) = delete;
+    Subscriber& operator=(const Subscriber&) = delete;
+    Subscriber(Subscriber &&other) = delete;
+    Subscriber& operator=(Subscriber &&other) = delete;
 
     ~Subscriber() override {
         NodeBase::GlobalNode()->removeSubscriber(*this);

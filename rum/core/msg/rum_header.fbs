@@ -1,3 +1,5 @@
+include "rum_common.fbs";
+
 namespace rum.msg;  // yeah it is not camel case, bite me
 
 enum MsgType : byte{
@@ -8,14 +10,21 @@ enum MsgType : byte{
 }
 
 table ReqInfo{
-    rep_topic:string;
+    client_id:string;
     id:uint32;
 }
 
+// table in union is experimental
 table RepInfo{
     status:int8;
     id:uint32;
 }
+
+union ExtraInfo {
+    ReqInfo,
+    RepInfo
+}
+
 
 table MsgHeader{
     type:MsgType;
@@ -23,9 +32,7 @@ table MsgHeader{
     name:string;
     protocal:string;
 
-    // other fields depends on type
-    request:ReqInfo;
-    response:RepInfo;
+    extra:ExtraInfo;
 }
 
 root_type MsgHeader;

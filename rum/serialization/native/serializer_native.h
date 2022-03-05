@@ -37,20 +37,6 @@ class SerializerNative : public Serializer<SerializerNative>{
         return t;
     }
 
-    template<typename SubT>
-    ItcFunc generateItcCallback(const SubFunc<SubT> &callback_f) const{
-        return [callback_f](const std::shared_ptr<const void>& msg){
-            callback_f(std::static_pointer_cast<const SubT>(msg));
-        };
-    }
-
-    template<typename SubT>
-    IpcFunc generateIpcCallback(const SubFunc<SubT> &callback_f) const{
-        return [callback_f](const std::shared_ptr<const void>& msg){
-            callback_f(std::static_pointer_cast<const SubT>(msg));
-        };
-    }
-
     inline static std::string Protocol(){
         return "native";
     }
