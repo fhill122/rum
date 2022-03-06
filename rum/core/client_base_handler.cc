@@ -12,8 +12,7 @@ namespace rum{
 rum::ClientBaseHandler::ClientBaseHandler(rum::ClientBaseImpl *pimpl) : pimpl_(pimpl) {}
 
 bool ClientBaseHandler::isConnected() const {
-    // todo ivan.
-    return true;
+    return pimpl_->pub_->isConnected();
 }
 
 SrvStatus CallHandler::getCurrentStatus() const {

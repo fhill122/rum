@@ -18,7 +18,6 @@
 
 namespace rum {
 
-// todo ivan. how about auto init if create called first?
 static inline bool Init(const NodeParam &param = NodeParam()) {
     return NodeBase::Init(param);
 }

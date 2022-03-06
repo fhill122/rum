@@ -24,10 +24,19 @@ ClientBaseImpl::callIpc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
 }
 
 std::unique_ptr<AwaitingResult> ClientBaseImpl::sendIpc(std::unique_ptr<Message> req_msg) {
-    auto awaiting_result = make_unique<AwaitingResult>();
+    unique_ptr<AwaitingResult> awaiting_result;
     {
         lock_guard lock(wait_list_mu_);
-        wait_list_.emplace(awaiting_result->id, awaiting_result.get());
+        while(true){
+            auto id = AwaitingResult::id_pool.fetch_add(1);
+            if (id==0) continue;
+            auto itr = wait_list_.find(id);
+            if (itr==wait_list_.end()){
+                awaiting_result = make_unique<AwaitingResult>(id);
+                wait_list_.emplace(awaiting_result->id, awaiting_result.get());
+                break;
+            }
+        }
     }
 
     // unlike itc, we do not check pub's connection here, as it would be checked before this call to prevent

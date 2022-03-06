@@ -7,6 +7,7 @@
 
 #include <thread>
 #include <string>
+#include <cmath>
 
 namespace ivtb{
 

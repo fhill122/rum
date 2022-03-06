@@ -118,7 +118,7 @@ bool SubContainer::getMsg(zmq::message_t &header, zmq::message_t &body) {
     return true;
 
     err:
-    // todo proper err handling
+    // todo ivan. proper err handling
     log.e(TAG, " exception in zmq socket recv");
     return false;
 }

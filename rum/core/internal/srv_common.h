@@ -27,8 +27,7 @@ struct AwaitingResult{
     mutable std::mutex mu;
     mutable std::condition_variable cv;
 
-    // todo ivan. overflow protection!
-    AwaitingResult(): id(id_pool.fetch_add(1, std::memory_order_relaxed)) {}
+    // AwaitingResult(): id(id_pool.fetch_add(1, std::memory_order_relaxed)) {}
     explicit AwaitingResult(unsigned int id) : id(id){}
 };
 
