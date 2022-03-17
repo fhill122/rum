@@ -11,7 +11,7 @@ namespace rum{
 
 constexpr int kMaxQueueSize = 1000;
 constexpr int kDefMasterInPort = 12580;
-// todo ivan. implement this as a dynamic port that master gives
+// todo ivan. try to only use 1 port. router/dealer pattern?
 constexpr int kDefMasterOutPort = 12581;
 constexpr int kMasterTrialPeriod = 100;  // ms
 constexpr int kNodeHbPeriod = 200; //ms

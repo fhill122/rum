@@ -49,13 +49,13 @@ void ClientBaseImpl::waitIpc(AwaitingResult *awaiting_result, unsigned int timeo
     // wait until got result or timeout
     bool got_result = true;
     unique_lock result_lock(awaiting_result->mu);
+    auto stop_waiting = [&awaiting_result](){
+        return awaiting_result->response!=nullptr || awaiting_result->status==SrvStatus::Cancelled;};
     if (timeout_ms){
-        awaiting_result->cv.wait(result_lock, [&awaiting_result](){return awaiting_result->response != nullptr;});
-    } else{
         // gcc bug before gcc10? https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41861
-        got_result = awaiting_result->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms),
-            [&awaiting_result](){
-                return awaiting_result->response!=nullptr || awaiting_result->status==SrvStatus::Cancelled;});
+        got_result = awaiting_result->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms), stop_waiting);
+    } else{
+        awaiting_result->cv.wait(result_lock, stop_waiting);
     }
 
     // erase only if timeout to reduce lock
@@ -97,13 +97,13 @@ void ClientBaseImpl::waitItc(AwaitingResult* awaiting_result, unsigned int timeo
     // wait until got result or timeout
     bool got_result = true;
     unique_lock result_lock(awaiting_result->mu);
+    auto stop_waiting = [&awaiting_result](){
+        return awaiting_result->response!=nullptr || awaiting_result->status==SrvStatus::Cancelled;};
     if (timeout_ms){
-        awaiting_result->cv.wait(result_lock, [&awaiting_result](){return awaiting_result->response != nullptr;});
-    } else{
         // gcc bug before gcc10? https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41861
-        got_result = awaiting_result->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms),
-            [&awaiting_result](){
-                return awaiting_result->response!=nullptr || awaiting_result->status==SrvStatus::Cancelled;});
+        got_result = awaiting_result->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms), stop_waiting);
+    } else{
+        awaiting_result->cv.wait(result_lock, stop_waiting);
     }
 
     if (!got_result){

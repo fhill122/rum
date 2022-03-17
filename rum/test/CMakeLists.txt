@@ -52,6 +52,14 @@ add_executable(cpprum_topic_test_companion
     cpprum/topic_test_companion.cc)
 target_link_libraries(cpprum_topic_test_companion cpprum)
 
+add_executable(srv_test
+    cpprum/srv_test.cc)
+target_link_libraries(srv_test gtest cpprum)
+
+add_executable(srv_test_companion
+    cpprum/srv_test_companion.cc)
+target_link_libraries(srv_test_companion cpprum)
+
 endif()
 
 add_subdirectory(dumb)

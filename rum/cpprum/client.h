@@ -17,6 +17,8 @@ struct FutureResult{
     std::future<Result<RepT>> future;
     // used to cancel a call which unblocks the future get immediately
     CallHandler call_handler;
+
+    inline bool cancel(){ return call_handler.cancel();}
 };
 
 // todo ivan. ReqT and RepT could just be in call, would that be better?
@@ -74,7 +76,8 @@ Result<RepT> Client<ReqT, RepT>::callForeground(std::unique_ptr<ReqT> request, u
     auto itc_result = callItc(request_sptr, timeout_ms);
     if (result.status!=SrvStatus::NoConnections){
         result.status = itc_result.status;
-        result.response = static_pointer_cast<RepT>(move(itc_result.response));
+        result.response = result.status==SrvStatus::OK?
+                          const_pointer_cast<RepT>(itc_factory_func_(itc_result.response)) : nullptr;
         return result;
     }
 
@@ -83,8 +86,12 @@ Result<RepT> Client<ReqT, RepT>::callForeground(std::unique_ptr<ReqT> request, u
         auto request_msg = ser_func_(request_sptr);
         auto ipc_result = callIpc(move(request_msg), timeout_ms);
         result.status = ipc_result.status;
-        auto response_msg = const_pointer_cast<const Message>(ipc_result.response->first);
-        result.response = const_pointer_cast<RepT>(ipc_factory_func_(response_msg, ipc_result.response->second));
+        if (result.status ==  SrvStatus::OK){
+            auto response_msg = const_pointer_cast<const Message>(ipc_result.response->first);
+            result.response = const_pointer_cast<RepT>(ipc_factory_func_(response_msg, ipc_result.response->second));
+        } else {
+            result.response = nullptr;
+        }
     } else{
         result.status = SrvStatus::NoConnections;
     }
@@ -105,7 +112,8 @@ FutureResult<RepT> Client<ReqT, RepT>::call(std::unique_ptr<ReqT> request, unsig
             [call_handler = result.call_handler, timeout_ms, this]() mutable -> Result<RepT>{
                 auto itc_result = waitItc(move(call_handler), timeout_ms);
                 return {itc_result.status,
-                        const_pointer_cast<RepT>(itc_factory_func_(itc_result.response))};
+                        itc_result.status == SrvStatus::OK?
+                        const_pointer_cast<RepT>(itc_factory_func_(itc_result.response)) : nullptr};
             });
         AssertLog(result.future.valid(), "");
         return result;
@@ -119,7 +127,9 @@ FutureResult<RepT> Client<ReqT, RepT>::call(std::unique_ptr<ReqT> request, unsig
                 auto ipc_result = waitIpc(move(call_handler), timeout_ms);
                 auto response_msg = const_pointer_cast<const Message>(ipc_result.response->first);
                 return {ipc_result.status,
-                        const_pointer_cast<RepT>(ipc_factory_func_(response_msg, ipc_result.response->second))};
+                        ipc_result.status == SrvStatus::OK?
+                        const_pointer_cast<RepT>(ipc_factory_func_(response_msg, ipc_result.response->second)) :
+                        nullptr};
             });
     } else {
         promise<Result<RepT>> tmp_promise;
