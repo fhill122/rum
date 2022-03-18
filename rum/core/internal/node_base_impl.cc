@@ -178,7 +178,7 @@ void NodeBaseImpl::checkRemote() {
 }
 
 bool NodeBaseImpl::shouldConnectIpc(const msg::NodeId *sync) const {
-    if (param_.enable_ipc_socket &&
+    if (param_.enable_ipc_txrx &&
         sync->ipc_addr()->size()>0 &&
         IpFromTcp(sync->tcp_addr()->str()) == kIpStr)
         return true;
@@ -186,7 +186,7 @@ bool NodeBaseImpl::shouldConnectIpc(const msg::NodeId *sync) const {
 }
 
 bool NodeBaseImpl::shouldConnectTcp(const msg::NodeId *sync) const {
-    if (param_.enable_tcp_socket &&
+    if (param_.enable_tcp_tx &&
         sync->tcp_addr()->size()>0)
         return true;
     return false;
@@ -376,7 +376,7 @@ void NodeBaseImpl::connect(const std::string &addr_in, const std::string &addr_o
 
     bool tcp_binding = sub_container_->bindTcpRaw();
     AssertLog(tcp_binding, "");
-    if (param_.enable_ipc_socket){
+    if (param_.enable_ipc_txrx){
         bool ipc_binding = sub_container_->bindIpcRaw();
         AssertLog(ipc_binding, "");
     }

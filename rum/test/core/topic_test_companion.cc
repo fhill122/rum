@@ -69,7 +69,7 @@ class ImplMultiTest{
     }
 };
 
-void IpcBasic(){
+void IpcBasic_both(){
     Log::I(__func__, "start");
     ImplTest impl_test;
     impl_test.init();
@@ -80,11 +80,25 @@ void IpcBasic(){
     Log::I(__func__, "end");
 }
 
-void TcpBasic(){
+void IpcBasic_ipc(){
+    // todo ivan. doing here
     Log::I(__func__, "start");
     ImplTest impl_test;
     NodeParam param;
-    param.enable_ipc_socket = false;
+    param.enable_tcp_tx = false;
+    impl_test.init(param);
+    for (int i = 0; i < 10; ++i) {
+        impl_test.pub_->publishIpc(zmq::message_t(1));
+    }
+    this_thread::sleep_for(10ms);
+    Log::I(__func__, "end");
+}
+
+void IpcBasic_tcp(){
+    Log::I(__func__, "start");
+    ImplTest impl_test;
+    NodeParam param;
+    param.enable_ipc_txrx = false;
     impl_test.init(param);
     for (int i = 0; i < 10; ++i) {
         impl_test.pub_->publishIpc(zmq::message_t(1));
@@ -141,7 +155,7 @@ void MultiTcp(){
     Log::I(__func__, "start");
     ImplMultiTest test;
     NodeParam param;
-    param.enable_ipc_socket = false;
+    param.enable_ipc_txrx = false;
     test.init(kNTopics,kNPubs, move(param));
     for (int i=0; i<100; ++i){
         for (int j=0; j<kNTopics; ++j) {
@@ -161,11 +175,14 @@ int main(int argc, char* argv[]){
     AssertLog(argc>1, "input command");
     string cmd = argv[1];
     Log::I(__func__, "invoked with " + cmd );
-    if (cmd == "IpcBasic"){
-        IpcBasic();
+    if (cmd == "IpcBasic_both"){
+        IpcBasic_both();
     }
-    else if (cmd == "TcpBasic"){
-        TcpBasic();
+    else if (cmd == "IpcBasic_tcp"){
+        IpcBasic_tcp();
+    }
+    else if (cmd == "IpcBasic_ipc"){
+        IpcBasic_ipc();
     }
     else if (cmd == "RemoteCrash"){
         RemoteCrash();

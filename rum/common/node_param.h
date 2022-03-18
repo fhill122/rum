@@ -11,17 +11,18 @@ namespace rum{
 
 struct NodeParam{
     // todo ivan. option to start master?
-    bool enable_ipc_socket = true;
+
+    bool enable_ipc_txrx = true;
     // Note: despite this setting, sync is always over tcp.
     // And tcp address is always there unlike ipc to id the node,
     // because of this, this only affect pubs' connection in this node
-    bool enable_tcp_socket = true;
+    bool enable_tcp_tx = true;
 
     inline NodeParam() {};
 
     inline bool check(){
         // no ipc communication
-        if (!enable_tcp_socket && !enable_ipc_socket) return false;
+        if (!enable_tcp_tx && !enable_ipc_txrx) return false;
         return true;
     };
 };

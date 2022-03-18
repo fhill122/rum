@@ -118,7 +118,7 @@ TEST_F(ImplTest, ItcBasic){
 TEST_F(ImplTest, IpcBasic) {
     init();
 
-    string cmd = argv0 + "_companion " + "IpcBasic";
+    string cmd = argv0 + "_companion " + "IpcBasic_both";
     system(cmd.c_str());
     EXPECT_EQ(itc_count.load(), 0);
     EXPECT_EQ(ipc_count.load(), 10);
@@ -127,7 +127,7 @@ TEST_F(ImplTest, IpcBasic) {
 TEST_F(ImplTest, TcpBasic) {
     init();
 
-    string cmd = argv0 + "_companion " + "TcpBasic";
+    string cmd = argv0 + "_companion " + "IpcBasic_tcp";
     system(cmd.c_str());
     EXPECT_EQ(itc_count.load(), 0);
     EXPECT_EQ(ipc_count.load(), 10);
@@ -135,21 +135,20 @@ TEST_F(ImplTest, TcpBasic) {
 
 TEST_F(ImplTest, TcpIcpMismatched) {
     NodeParam param;
-    param.enable_tcp_socket = false;
+    param.enable_ipc_txrx = false;
     init(move(param));
 
-    string cmd = argv0 + "_companion " + "TcpBasic";
+    string cmd = argv0 + "_companion " + "IpcBasic_ipc";
     system(cmd.c_str());
     EXPECT_EQ(itc_count.load(), 0);
-    // well, we need to rethink tcp param
-    EXPECT_EQ(ipc_count.load(), 10);
+    EXPECT_EQ(ipc_count.load(), 0);
 }
 
 TEST_F(ImplTest, ItcIpcTcpBasic) {
     init();
 
-    string cmd1 = argv0 + "_companion " + "IpcBasic";
-    string cmd2 = argv0 + "_companion " + "TcpBasic";
+    string cmd1 = argv0 + "_companion " + "IpcBasic_both";
+    string cmd2 = argv0 + "_companion " + "IpcBasic_tcp";
     auto t1 = thread([cmd1]{ LaunchProcess(cmd1);});
     auto t2 = thread([cmd2]{ LaunchProcess(cmd2);});
 
