@@ -4,16 +4,27 @@
 #include <rum/serialization/flatbuffers/serializer_fbs.h>
 #include "../test_msg/test_number_generated.h"
 
+namespace rum {
 
-struct ServerFb{
+constexpr char kSrv[] = "GetImage";
 
+enum class CompanionCmd : int{
+    BasicInterP = 0,
+    BasicIpcInterP,
+    BasicTcpInterP,
 };
 
-bool ServerFbCallback(const std::shared_ptr<const rum::Message>& request,
-                      std::shared_ptr<flatbuffers::FlatBufferBuilder>& response){
-    const rum::test::msg::Number* req = rum::test::msg::GetNumber(request->data());
-    // rum::Log::I(__func__, "received a num of n1 %d", req->n1());
-    response->Finish(rum::test::msg::CreateNumber(*response, req->n1(), req->n1()+1,
+inline bool ServerFbCallback(const std::shared_ptr<const rum::Message> &request,
+                             std::shared_ptr<flatbuffers::FlatBufferBuilder> &response,
+                             int sleep_ms) {
+    using namespace std;
+    const rum::test::msg::Number *req = rum::test::msg::GetNumber(request->data());
+    rum::Log::I(__func__, "server at %s received a num of n1 %d",
+                NodeBase::GlobalNode()->getStrId().c_str(), req->n1());
+    response->Finish(rum::test::msg::CreateNumber(*response, req->n1(), req->n1() + 1,
                                                   reinterpret_cast<std::uintptr_t>(request->data())));
+    if(sleep_ms>0) this_thread::sleep_for(sleep_ms * 1ms);
     return true;
+}
+
 }

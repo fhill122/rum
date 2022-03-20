@@ -81,7 +81,6 @@ void IpcBasic_both(){
 }
 
 void IpcBasic_ipc(){
-    // todo ivan. doing here
     Log::I(__func__, "start");
     ImplTest impl_test;
     NodeParam param;

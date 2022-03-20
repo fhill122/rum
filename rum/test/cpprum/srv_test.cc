@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <rum/cpprum/rum.h>
+#include <rum/common/common.h>
 
 #include <rum/serialization/flatbuffers/serializer_fbs.h>
 #include "../test_msg/test_number_generated.h"
@@ -16,7 +17,6 @@ using namespace rum;
 string argv0;
 
 struct SimpleFbNode : public ::testing::Test{
-    static constexpr char kSrv[] = "GetImage";
     Client<FbsBuilder, Message>::UniquePtr  client = nullptr;
     Server::UniquePtr server = nullptr;
 
@@ -28,14 +28,14 @@ struct SimpleFbNode : public ::testing::Test{
     }
 };
 
-// seg occasionally. itcTypeConvert on message with null ptr
-TEST_F(SimpleFbNode, BasicItc){
+TEST_F(SimpleFbNode, BasicIntraP){
     client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
-    server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv, &ServerFbCallback);
+    server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv,
+                bind(ServerFbCallback, placeholders::_1, placeholders::_2, 0) );
 
     auto req = CreateReqeust(1);
     uintptr_t req_address = reinterpret_cast<std::uintptr_t>(req->GetBufferPointer());
-    auto future_res = client->call(move(req));
+    auto future_res = client->call(move(req), 50);
     auto result = future_res.future.get();
     ASSERT_EQ(result.status, SrvStatus::OK);
     auto rep = test::msg::GetNumber(result.response->data());
@@ -43,10 +43,40 @@ TEST_F(SimpleFbNode, BasicItc){
     // itc takes place
     ASSERT_EQ(rep->l1(), req_address);
 
-    auto direct_res = client->callForeground(CreateReqeust(2));
+    auto direct_res = client->callForeground(CreateReqeust(2), 50);
     ASSERT_EQ(direct_res.status, SrvStatus::OK);
     auto direct_rep = test::msg::GetNumber(direct_res.response->data());
     ASSERT_EQ(direct_rep->n2(), 2+1);
+
+    // todo ivan. close server
+
+}
+
+
+// todo ivan. sometimes remote is not ready
+TEST_F(SimpleFbNode, BasicInterP){
+    client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
+    string cmd = argv0 + "_companion " + to_string(static_cast<int>(CompanionCmd::BasicInterP));
+    thread companion_t([&]{system(cmd.c_str());});
+    this_thread::sleep_for((kNodeHbPeriod+150)*1ms);
+
+    auto req = CreateReqeust(1);
+    uintptr_t req_address = reinterpret_cast<std::uintptr_t>(req->GetBufferPointer());
+    Log::W(__func__, "call");
+    auto future_res = client->call(move(req), 50);
+    auto result = future_res.future.get();
+    ASSERT_EQ(result.status, SrvStatus::OK);
+    auto rep = test::msg::GetNumber(result.response->data());
+    ASSERT_EQ(rep->n2(), 1+1);
+    ASSERT_NE(rep->l1(), req_address);
+
+    Log::W(__func__, "call foreground");
+    auto direct_res = client->callForeground(CreateReqeust(2), 50);
+    ASSERT_EQ(direct_res.status, SrvStatus::OK);
+    auto direct_rep = test::msg::GetNumber(direct_res.response->data());
+    ASSERT_EQ(direct_rep->n2(), 2+1);
+
+    companion_t.join();
 }
 
 //todo ivan.
@@ -54,6 +84,8 @@ TEST_F(SimpleFbNode, BasicItc){
 // no connection, should return quickly (ping function required)
 // different serializer for req and rep
 // cancel
+// server cb err, serialization err, crash, timeout
+// threadpool
 
 
 int main(int argc, char **argv){

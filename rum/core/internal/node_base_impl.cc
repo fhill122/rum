@@ -11,7 +11,6 @@
 #include "rum/core/msg/rum_sync_generated.h"
 #include "rum/extern/ivtb/stopwatch.h"
 #include "rum/core/msg/util.h"
-#include "node_id.h"
 
 using namespace std;
 using namespace ivtb;
@@ -104,7 +103,8 @@ void NodeBaseImpl::syncCb(const zmq::message_t &msg) {
         AssertLog(false, "not implemented yet");
 
     auto update = remote_manager_->wholeSyncUpdate(msg.data(), msg.size());
-
+    if (!update.empty())
+        log.d(__func__, update.toString());
     updatePubConnection(sync->node(), update);
 }
 
@@ -272,14 +272,13 @@ void NodeBaseImpl::removePublisher(PublisherBaseImpl* &pub) {
 
 ClientBaseImpl *NodeBaseImpl::addClient(const string &srv_name, const string &pub_protocol) {
     // todo ivan. can we pass pub,sub factory function to client constructor? or separate pub/sub creation from setup
-    auto node_str = GetNodeStrId(kPid, sub_container_->getTcpAddr());
+    auto node_str = getStrId();
     auto cli_id = GetRepTopic(srv_name, node_str);
     auto *pub = addPublisher(GetReqTopic(srv_name), pub_protocol, msg::MsgType_ServiceRequest);
     pub->set_cli_id(cli_id);
     // itc or ipc will never be called
     auto *sub = addSubscriber(cli_id, ClientBaseImpl::sub_dumb_tp_, 0,
                               nullptr, nullptr, nullptr);
-    // todo ivan. shutdown will leak client.
     return new ClientBaseImpl(pub, sub);
 }
 
@@ -325,12 +324,13 @@ ServerBaseImpl *NodeBaseImpl::addServer(const string &srv_name,
 
 void NodeBaseImpl::removeServer(ServerBaseImpl *&server) {
     // todo ivan. doing here
+    string srv_name = server->srvName();
     removeSubscriber(server->sub_);
     for (auto& pair_itr : server->pubs_)
         removePublisher(pair_itr.second);
 
     auto server_remove_future = sync_tp_->enqueue([&](){
-        servers_.erase(server->srvName());
+        servers_.erase(srv_name);
     });
     server_remove_future.wait();
 

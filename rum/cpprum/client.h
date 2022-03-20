@@ -72,16 +72,16 @@ Result<RepT> Client<ReqT, RepT>::callForeground(std::unique_ptr<ReqT> request, u
     Result<RepT> result;
     shared_ptr<ReqT> request_sptr = move(request);
 
-    // call itc
+    // call intrap
     auto itc_result = callItc(request_sptr, timeout_ms);
-    if (result.status!=SrvStatus::NoConnections){
+    if (itc_result.status!=SrvStatus::NoConnections){
         result.status = itc_result.status;
         result.response = result.status==SrvStatus::OK?
                           const_pointer_cast<RepT>(itc_factory_func_(itc_result.response)) : nullptr;
         return result;
     }
 
-    // call ipc
+    // call interp
     if (isConnected()){
         auto request_msg = ser_func_(request_sptr);
         auto ipc_result = callIpc(move(request_msg), timeout_ms);
@@ -105,7 +105,7 @@ FutureResult<RepT> Client<ReqT, RepT>::call(std::unique_ptr<ReqT> request, unsig
     FutureResult<RepT> result;
     shared_ptr<ReqT> request_sptr = move(request);
 
-    // itc case
+    // intrap case
     result.call_handler = sendItc(request_sptr);
     if (result.call_handler.getCurrentStatus()!=SrvStatus::NoConnections){
         result.future =  std::async(std::launch::async,
@@ -119,17 +119,19 @@ FutureResult<RepT> Client<ReqT, RepT>::call(std::unique_ptr<ReqT> request, unsig
         return result;
     }
 
-    // ipc case
+    // interp case
     if (isConnected()){
         result.call_handler = sendIpc(ser_func_(request_sptr));
         result.future = std::async(std::launch::async,
             [call_handler = result.call_handler, timeout_ms, this]() mutable -> Result<RepT>{
                 auto ipc_result = waitIpc(move(call_handler), timeout_ms);
-                auto response_msg = const_pointer_cast<const Message>(ipc_result.response->first);
-                return {ipc_result.status,
-                        ipc_result.status == SrvStatus::OK?
-                        const_pointer_cast<RepT>(ipc_factory_func_(response_msg, ipc_result.response->second)) :
-                        nullptr};
+                if (ipc_result.status == SrvStatus::OK){
+                    auto response_msg = const_pointer_cast<const Message>(ipc_result.response->first);
+                    return {ipc_result.status,
+                            const_pointer_cast<RepT>(ipc_factory_func_(response_msg, ipc_result.response->second)) };
+                } else{
+                    return {ipc_result.status, nullptr};
+                }
             });
     } else {
         promise<Result<RepT>> tmp_promise;

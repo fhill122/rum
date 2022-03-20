@@ -34,6 +34,8 @@ class NodeBase {
 
     virtual ~NodeBase();
 
+    std::string getStrId();
+
     SubscriberBaseHandler addSubscriber(const std::string &topic,
         const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
         const IpcFunc &ipc_cb,

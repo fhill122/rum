@@ -24,6 +24,28 @@ struct RemoteManager {
         std::vector<std::string> topics_removed;
         std::vector<std::string> rep_topics_new;
         std::vector<std::string> rep_topics_removed;
+
+        inline std::string toString(){
+            std::string out;
+            for (const auto& t : topics_new){
+                out += "+" + t + " ";
+            }
+            for (const auto& t : topics_removed){
+                out += "-" + t + " ";
+            }
+            for (const auto& t : rep_topics_new){
+                out += "+" + t + " ";
+            }
+            for (const auto& t : rep_topics_removed){
+                out += "-" + t + " ";
+            }
+            return out;
+        }
+
+        inline bool empty(){
+            return topics_new.empty() && topics_removed.empty() &&
+                    rep_topics_new.empty() && rep_topics_removed.empty();
+        }
     };
 
 

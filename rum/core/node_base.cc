@@ -37,6 +37,10 @@ NodeBase::NodeBase(const string &name, const NodeParam &param):
 
 NodeBase::~NodeBase() =  default;
 
+string NodeBase::getStrId() {
+    return pimpl_->getStrId();
+}
+
 SubscriberBaseHandler
 NodeBase::addSubscriber(const std::string &topic,
                         const shared_ptr<ThreadPool> &tp,

@@ -10,7 +10,7 @@
 
 namespace rum{
 
-// would this better than inheritance here?
+// todo ivan. would this better than inheritance here?
 class Server{
   public:
     using SharedPtr = std::shared_ptr<Server>;
@@ -22,6 +22,11 @@ class Server{
   public:
     explicit Server(ServerBaseHandler&& handler) : handler_(handler){}
 
+    virtual ~Server() {
+        NodeBase::GlobalNode()->removeServer(handler_);
+    }
+
+    // todo ivan. define other 3 constructor
 };
 
 }

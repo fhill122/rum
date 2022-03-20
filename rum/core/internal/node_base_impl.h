@@ -15,6 +15,7 @@
 #include "rum/common/node_param.h"
 #include "rum/extern/ivtb/scheduler.h"
 #include "rum/core/msg/rum_sync_generated.h"
+#include "node_id.h"
 
 namespace rum {
 
@@ -103,6 +104,8 @@ class NodeBaseImpl {
      * @param addr_out outgoing address
      */
     void connect(const std::string &addr_in, const std::string &addr_out); RUM_THREAD_UNSAFE
+
+    inline std::string getStrId(){return GetNodeStrId(kPid, sub_container_->getTcpAddr());}
 
     inline std::unique_ptr<SubContainer>& dbgGetSubContainer(){return sub_container_;};
 };

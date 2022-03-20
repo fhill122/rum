@@ -54,7 +54,7 @@ string GetRumIp() {
         exit(1);
     }
 
-    printer.i("rum", "Rum started on %s", ip_str.c_str());
+    printer.i("rum", "Rum started on %d@%s", getpid(), ip_str.c_str());
     return ip_str;
 }
 
