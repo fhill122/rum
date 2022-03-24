@@ -9,26 +9,11 @@
 #include <rum/serialization/native/serializer_native.h>
 #include <rum/cpprum/rum.h>
 #include <rum/extern/ivtb/stopwatch.h>
+#include <geometry_msgs/Pose.h>
 
 namespace rum {
 
-struct Point {
-    double x;
-    double y;
-    double z;
-};
-
-struct Quaternion {
-    double x;
-    double y;
-    double z;
-    double w;
-};
-
-struct Pose {
-    Point position;
-    Quaternion orientation;
-};
+using Pose = ::geometry_msgs::Pose;
 
 static constexpr char kRumTopicPing[] = "Ping";
 static constexpr char kRumTopicPong[] = "Pong";

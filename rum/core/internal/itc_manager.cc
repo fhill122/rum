@@ -44,6 +44,7 @@ bool ItcManager::scheduleItc(const string &topic, const shared_ptr<const void> &
         return false;
 
     auto sub_msg = make_shared<SubscriberBaseImpl::TopicItcMsg>(msg);
+    // todo ivan. sub_msg is not necessary a shared_ptr, at least could be moved for the last one
     for (auto *sub : itr->second){
         sub->enqueue(sub_msg);
     }

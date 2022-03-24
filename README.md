@@ -30,3 +30,5 @@ Why so harsh on ros? Coz I'm mean...
   multiple pub in server, each connect to a single client's subcontainer. we need ping to wait until connection established
 - serialization should be in cpprum?
 - rename ipc itc to intrap and interp
+- try lock free queue, sub enqueue lock takes a lot time
+- change default master port number to 10086, warning if a node loses connection to master
