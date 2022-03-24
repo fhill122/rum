@@ -26,7 +26,7 @@ class DemoComponentSub : rum::Component{
     }
 
     static void SubCallback(const shared_ptr<const Point3d> &point){
-        rum::Log::V("sub", "received a point of %.3f %.3f %.3f. address: %p",
+        rum::Log::I("sub", "received a point of %.3f %.3f %.3f. address: %p",
                point->x, point->y, point->z, point.get());
     }
 };

@@ -71,7 +71,9 @@ class Serializer {
     template<typename SubT>
     std::shared_ptr<const SubT> itcTypeConvert(const std::shared_ptr<const void>& msg) const{
         // check if this function is overridden
-        if constexpr (&S::template itcTypeConvert<SubT> == &Serializer<S>::itcTypeConvert<SubT>)
+        // todo ivan. linux gcc failed while mac clang passed
+        // if constexpr (&S::template itcTypeConvert<SubT> == &Serializer<S>::itcTypeConvert<SubT>)
+        if (&S::template itcTypeConvert<SubT> == &Serializer<S>::itcTypeConvert<SubT>)
             return std::static_pointer_cast<const SubT>(msg);
         else
             return ((S*)this)-> template itcTypeConvert<SubT>(msg);
@@ -81,7 +83,9 @@ class Serializer {
     template<typename SubT>
     std::shared_ptr<const SubT> ipcTypeConvert(const std::shared_ptr<const void>& msg) const{
         // check if this function is overridden
-        if constexpr (&S::template ipcTypeConvert<SubT> == &Serializer<S>::ipcTypeConvert<SubT>)
+        // todo ivan. linux gcc failed while mac clang passed
+        // if constexpr (&S::template ipcTypeConvert<SubT> == &Serializer<S>::ipcTypeConvert<SubT>)
+        if (&S::template ipcTypeConvert<SubT> == &Serializer<S>::ipcTypeConvert<SubT>)
             return std::static_pointer_cast<const SubT>(msg);
         else
             return ((S*)this)-> template ipcTypeConvert<SubT>(msg);

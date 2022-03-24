@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 #include <mutex>
+#include <condition_variable>
 
 #include "rum/common/srv_def.h"
 #include "rum/common/common.h"
