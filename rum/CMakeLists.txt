@@ -32,6 +32,10 @@ add_library(rumcore SHARED
     serialization/protobuf/serializer_proto.h
 )
 target_link_libraries(rumcore zmq Threads::Threads)
+# Release or RelWithDebInfo
+if (CMAKE_BUILD_TYPE MATCHES "Rel")
+    target_compile_definitions(rumcore PRIVATE LOG_SUPRESS_I)
+endif()
 
 add_library(cpprum SHARED
     cpprum/rum.h
