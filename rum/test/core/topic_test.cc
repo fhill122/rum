@@ -6,7 +6,6 @@
 //
 
 #include <gtest/gtest.h>
-#include <glog/logging.h>
 
 #include <rum/common/log.h>
 #include <rum/core/internal/node_base_impl.h>
@@ -309,8 +308,6 @@ int main(int argc, char **argv){
     // zmq_force_delay = 50;
     // todo ivan. wait until master is up and pingable
     this_thread::sleep_for(10ms);
-    google::InitGoogleLogging(argv[0]);
-    google::InstallFailureSignalHandler();
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
     argv0 = argv[0];
 

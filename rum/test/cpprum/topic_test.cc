@@ -2,7 +2,6 @@
  * Created by Ivan B on 2022/1/9.
  */
 #include <gtest/gtest.h>
-#include <glog/logging.h>
 
 #include <rum/cpprum/rum.h>
 #include <rum/common/log.h>
@@ -176,9 +175,6 @@ TEST_F(SimpleNativeNode, IpcTest){
 
 int main(int argc, char **argv){
     rum::Init();
-
-    google::InitGoogleLogging(argv[0]);
-    google::InstallFailureSignalHandler();
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
     argv0 = argv[0];
 

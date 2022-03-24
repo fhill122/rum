@@ -1,9 +1,6 @@
 find_library(GTEST_LIB gtest)
 if (GTEST_LIB)
 
-# todo ivan. check Glog library
-find_package(Glog REQUIRED)
-
 add_executable(discovery_raw_tet
     discovery_raw.cc)
 target_link_libraries(discovery_raw_tet gtest rumcore)
@@ -26,7 +23,7 @@ target_link_libraries(core_node_test gtest rumcore)
 
 add_executable(core_topic_test
     core/topic_test.cc)
-target_link_libraries(core_topic_test gtest rumcore Glog)
+target_link_libraries(core_topic_test gtest rumcore)
 
 add_executable(core_topic_test_companion
     core/topic_test_companion.cc)
@@ -46,7 +43,7 @@ target_link_libraries(ser_fb_test gtest rumcore)
 
 add_executable(cpprum_topic_test
     cpprum/topic_test.cc)
-target_link_libraries(cpprum_topic_test gtest cpprum Glog)
+target_link_libraries(cpprum_topic_test gtest cpprum)
 
 add_executable(cpprum_topic_test_companion
     cpprum/topic_test_companion.cc)
