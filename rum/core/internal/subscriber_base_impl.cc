@@ -61,6 +61,13 @@ SubscriberBaseImpl::~SubscriberBaseImpl() {
 void SubscriberBaseImpl::enqueue(const shared_ptr<SubMsg> &msg) {
     AssertLog(msg, "");
 
+#ifdef RUM_USE_MOODYCAMEL_Q
+    msg_q_.enqueue(msg);
+    if(queue_size_>0 && msg_q_.size_approx()>queue_size_){
+        shared_ptr<SubMsg> drop;
+        msg_q_.try_dequeue(drop);
+    }
+#else
     {
         // lock as could be scheduled from any threads
         lock_guard lock(queue_mu_);
@@ -70,12 +77,19 @@ void SubscriberBaseImpl::enqueue(const shared_ptr<SubMsg> &msg) {
             msg_q_.pop();
         }
     }
+#endif
 
     tp_->enqueue([weak_this = weak_from_this()]() mutable {
         auto sub = weak_this.lock();
         if (!sub) return ;
 
         shared_ptr<SubMsg> front_msg;
+#ifdef RUM_USE_MOODYCAMEL_Q
+        bool dequeued = sub->msg_q_.try_dequeue(front_msg);
+        if(dequeued){
+            front_msg->processSelf(sub.get());
+        }
+#else
         {
             // have to lock even single thread tp_ as push and overflow pop happening in other threads
             lock_guard lock(sub->queue_mu_);
@@ -85,14 +99,21 @@ void SubscriberBaseImpl::enqueue(const shared_ptr<SubMsg> &msg) {
         }
 
         front_msg->processSelf(sub.get());
+#endif
     });
 }
 
 void SubscriberBaseImpl::clearAndReleaseTp(){
+#ifdef RUM_USE_MOODYCAMEL_Q
+    auto remain_size = msg_q_.size_approx();
+    vector<shared_ptr<SubMsg>> deq_vec(remain_size);
+    msg_q_.try_dequeue_bulk(deq_vec.begin(), remain_size);
+#else
     {
         lock_guard lock(queue_mu_);
         msg_q_ = decltype(msg_q_)();
     }
+#endif
     // we have to make sure after this point, no enqueue would happen
     tp_.reset();
 }

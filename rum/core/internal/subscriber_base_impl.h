@@ -15,6 +15,11 @@
 #include "../msg/rum_header_generated.h"
 #include "srv_common.h"
 
+// #define RUM_USE_MOODYCAMEL_Q
+#ifdef RUM_USE_MOODYCAMEL_Q
+#include "rum/extern/concurrentqueue/concurrentqueue.h"
+#endif
+
 namespace rum {
 
 class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImpl>{
@@ -78,10 +83,12 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
 
   private:
     std::shared_ptr<ThreadPool> tp_;
-    // todo ivan. consider a lock free queue: https://github.com/cameron314/concurrentqueue
-    // std::queue<std::shared_ptr<zmq::message_t>> msg_q_;
+#ifdef RUM_USE_MOODYCAMEL_Q
+    moodycamel::ConcurrentQueue<std::shared_ptr<SubMsg>> msg_q_;
+#else
     std::queue<std::shared_ptr<SubMsg>> msg_q_;  RUM_LOCK_BY(queue_mu_)
     std::mutex queue_mu_;
+#endif
     const size_t queue_size_; // <=0 to indicate infinite
 
     IpcFunc ipc_callback_;
