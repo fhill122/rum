@@ -323,8 +323,7 @@ ServerBaseImpl *NodeBaseImpl::addServer(const string &srv_name,
 }
 
 void NodeBaseImpl::removeServer(ServerBaseImpl *&server) {
-    // todo ivan. doing here
-    string srv_name = server->srvName();
+    string srv_name{server->srvName()};
     removeSubscriber(server->sub_);
     for (auto& pair_itr : server->pubs_)
         removePublisher(pair_itr.second);

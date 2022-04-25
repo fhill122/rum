@@ -16,7 +16,6 @@ class ServerBaseImpl {
     // <cli_id, pub>
     std::unordered_map<std::string, PublisherBaseImpl*> pubs_;  RUM_LOCK_BY(pubs_mu_)
     std::mutex pubs_mu_;
-    // we need a dummy response sub to setup syncs
     SubscriberBaseImpl* sub_ = nullptr;
     // std::string service_name_;
     const std::string pub_protocol_;
@@ -30,7 +29,7 @@ class ServerBaseImpl {
     ItcFunc genSubItc(const SrvItcFunc& srv_func);
     IpcFunc genSubIpc(const SrvIpcFunc& srv_func);
 
-    const std::string& srvName() const {return sub_->topic_;}
+    std::string_view srvName() const {return SrvFromReqTopic(sub_->topic_);}
 
     void addPub(PublisherBaseImpl* pub);
     PublisherBaseImpl* removePub(const std::string &cli_id);

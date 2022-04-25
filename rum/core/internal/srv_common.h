@@ -46,6 +46,10 @@ inline bool IsRepTopic(const char* topic){
     return StrStartWith(topic, kSrvRepTopicPrefix);
 }
 
+inline std::string_view SrvFromReqTopic(const std::string &req_topic){
+    return std::string_view(req_topic).substr(strlen(kSrvReqTopicPrefix));
+}
+
 inline std::string_view SrvFromRepTopic(const std::string &rep_topic){
     std::string_view out(rep_topic);
     auto pos = out.find('_', strlen(kSrvRepTopicPrefix));
