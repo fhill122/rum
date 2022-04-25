@@ -6,6 +6,7 @@
 
 #include "rum/common/log.h"
 #include "rum/common/common.h"
+#include "rum/extern/ivtb/stopwatch.h"
 
 #define TAG (service_name_+"_cli")
 
@@ -23,7 +24,7 @@ ClientBaseImpl::callIpc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
     return awaiting_result;
 }
 
-std::unique_ptr<AwaitingResult> ClientBaseImpl::sendIpc(std::unique_ptr<Message> req_msg) {
+std::unique_ptr<AwaitingResult> ClientBaseImpl::sendIpc(std::unique_ptr<Message> req_msg, bool ping) {
     unique_ptr<AwaitingResult> awaiting_result;
     {
         lock_guard lock(wait_list_mu_);
@@ -41,7 +42,11 @@ std::unique_ptr<AwaitingResult> ClientBaseImpl::sendIpc(std::unique_ptr<Message>
 
     // unlike itc, we do not check pub's connection here, as it would be checked before this call to prevent
     // unnecessary serialization
-    pub_->publishReqIpc(awaiting_result->id, *req_msg);
+    if (ping){
+        pub_->publishPingReq(awaiting_result->id);
+    } else{
+        pub_->publishReqIpc(awaiting_result->id, *req_msg);
+    }
     return awaiting_result;
 }
 
@@ -113,6 +118,20 @@ void ClientBaseImpl::waitItc(AwaitingResult* awaiting_result, unsigned int timeo
         if (awaiting_result->status == SrvStatus::OK)
             AssertLog(awaiting_result->response, "ok but null");
     }
+}
+
+bool ClientBaseImpl::ping(unsigned int timeout_ms, unsigned int retry_ms) {
+    ivtb::StopwatchMono stopwatch;
+    do{
+        // check intraP
+        if (pub_->connectedItc()) return true;
+
+        // ping interP
+        auto awaiting_result = sendIpc(nullptr, true);
+        waitIpc(awaiting_result.get(), retry_ms);
+        if (awaiting_result->status==SrvStatus::OK) return true;
+    } while(stopwatch.passedMs() < timeout_ms);
+    return false;
 }
 
 bool ClientBaseImpl::Cancel(AwaitingResult &awaiting) {

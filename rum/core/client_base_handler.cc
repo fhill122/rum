@@ -54,4 +54,8 @@ ClientBaseHandler::callIpc(std::unique_ptr<Message> request, unsigned int timeou
     return waitIpc(sendIpc(move(request)), timeout_ms);
 }
 
+bool ClientBaseHandler::ping(unsigned int timeout_ms, unsigned int retry_ms) {
+    return pimpl_->ping(timeout_ms, retry_ms);
+}
+
 }

@@ -10,7 +10,9 @@
 namespace rum{
 
 struct NodeParam{
-    // todo ivan. option to start master?
+    // todo ivan.
+    //  - option to start master?
+    //  - option to set name
 
     bool enable_ipc_txrx = true;
     // Note: despite this setting, sync is always over tcp.

@@ -37,8 +37,10 @@ class ClientBaseImpl {
     void waitItc(AwaitingResult* awaiting, unsigned int timeout_ms = 0);
 
     std::unique_ptr<AwaitingResult> callIpc(std::unique_ptr<Message> req_msg, unsigned int timeout_ms = 0);
-    std::unique_ptr<AwaitingResult> sendIpc(std::unique_ptr<Message> req_msg);
+    std::unique_ptr<AwaitingResult> sendIpc(std::unique_ptr<Message> req_msg, bool ping=false);
     void waitIpc(AwaitingResult* awaiting, unsigned int timeout_ms = 0);
+
+    bool ping(unsigned int timeout_ms, unsigned int retry_ms);
 
     static bool Cancel(AwaitingResult &awaiting);
 

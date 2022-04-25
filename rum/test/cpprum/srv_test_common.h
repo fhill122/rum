@@ -16,8 +16,9 @@ enum class CompanionCmd : int{
 
 inline bool ServerFbCallback(const std::shared_ptr<const rum::Message> &request,
                              std::shared_ptr<flatbuffers::FlatBufferBuilder> &response,
-                             int sleep_ms) {
+                             int sleep_ms, std::atomic_int *count = nullptr) {
     using namespace std;
+    if(count) count->fetch_add(1);
     const rum::test::msg::Number *req = rum::test::msg::GetNumber(request->data());
     rum::Log::I(__func__, "server at %s received a num of n1 %d",
                 NodeBase::GlobalNode()->getStrId().c_str(), req->n1());

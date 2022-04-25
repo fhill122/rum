@@ -154,6 +154,7 @@ bool SubContainer::loop() {
                     move(body), header_fb->protocal()->str() );
         }
         for (auto &sub : itr->second){
+            // todo ivan. could use enqueue token. move for last one
             sub->enqueue(sub_msg);
         }
     }
@@ -173,6 +174,7 @@ bool SubContainer::loop() {
         auto sub_msg = make_shared<SubscriberBaseImpl::SrvIpcRequest>(move(body), header_fb->protocal()->str(),
                                                                       req_info->id(), req_info->client_id()->str());
         AssertLog(itr->second.size()==1, "multiple local services");
+        // todo ivan. could use enqueue token
         itr->second[0]->enqueue(sub_msg);
     }
     // for srv response, we do all the work here.

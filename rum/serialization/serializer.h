@@ -92,7 +92,7 @@ class Serializer {
     }
 
     /**
-     * Get protocol
+     * Get protocol. Name starts with "__" is reserved
      * @return Protocol
      */
     static std::string Protocol(){

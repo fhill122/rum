@@ -40,6 +40,21 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
                         static_pointer_cast<const SubscriberBaseImpl::SrvIpcRequest::Content>(request_void)
                 );
 
+        // handle ping
+        if (request->protocol==kPingProtocol){
+            AssertLog(!request->client_id.empty(), "");
+            lock_guard lock(pubs_mu_);
+            auto itr = pubs_.find(request->client_id);
+            if (itr==pubs_.end()){
+                // request is faster than sync, pub not created yet
+                // todo ivan. wait? quick end instead of letting client wait?
+                log.w(string(srvName()), "request is faster than sync, pub not created yet");
+            } else{
+                itr->second->publishPingRep(request->id);
+            }
+            return;
+        }
+
         // todo ivan. doing here. how to make sure safe removal? sub removed, long ongoing task is still here, when pub called it could be a null
         std::shared_ptr<Message> rep_message;
         auto request_message = static_pointer_cast<const Message>(request->request);
@@ -50,7 +65,7 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
         if (itr==pubs_.end()){
             // request is faster than sync, pub not created yet
             // todo ivan. wait? quick end instead of letting client wait?
-            log.w(srvName(), "request is faster than sync, pub not created yet");
+            log.w(string(srvName()), "request is faster than sync, pub not created yet");
             return;
         }
         if (ok){

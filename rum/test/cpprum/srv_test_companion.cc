@@ -4,6 +4,7 @@
 
 #include <rum/common/log.h>
 #include <rum/common/common.h>
+#include <rum/extern/ivtb/stopwatch.h>
 
 #include "srv_test_common.h"
 
@@ -11,12 +12,31 @@ using namespace std;
 using namespace rum;
 
 void BasicInterP(){
+    atomic_int count{0};
     auto server = CreateServer<Message,FbsBuilder,SerializerFbs>(
-            kSrv, bind(ServerFbCallback, placeholders::_1, placeholders::_2, 0) );
+            kSrv, bind(ServerFbCallback, placeholders::_1, placeholders::_2, 0, &count) );
     Log::I(__func__, "sleep");
-    this_thread::sleep_for((kNodeHbPeriod+100)*1ms);
+    ivtb::StopwatchMono stopwatch;
+    while(stopwatch.passedMs()<kNodeHbPeriod+1000){
+        if (count.load()!=0) break;
+        this_thread::sleep_for(100ms);
+    }
 }
 
+void BasicTcpInterP(){
+    NodeParam param;
+    param.enable_ipc_txrx = false;
+    rum::Init(param);
+    atomic_int count{0};
+    auto server = CreateServer<Message,FbsBuilder,SerializerFbs>(
+            kSrv, bind(ServerFbCallback, placeholders::_1, placeholders::_2, 0, &count) );
+    Log::I(__func__, "sleep");
+    ivtb::StopwatchMono stopwatch;
+    while(stopwatch.passedMs()<kNodeHbPeriod+1000){
+        if (count.load()!=0) break;
+        this_thread::sleep_for(100ms);
+    }
+}
 
 int main(int argc, char** argv){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
@@ -29,9 +49,12 @@ int main(int argc, char** argv){
         case CompanionCmd::BasicInterP:
             BasicInterP();
             break;
-        case CompanionCmd::BasicIpcInterP:
+        case CompanionCmd::BasicTcpInterP:
+            BasicTcpInterP();
             break;
-        case CompanionCmd::BasicTcpInterP:break;
+        default:
+            Log::E(__func__, "not implemented for %d", cmd);
+            return 1;
     }
     Log::I(__func__, "companion end");
 

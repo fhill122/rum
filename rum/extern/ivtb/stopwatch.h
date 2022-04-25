@@ -1,5 +1,5 @@
 //
-// A stopwatch implementation with std::chrono::high_resolution_clock
+// A stopwatch implementation with any std::chrono clock type, default with high_resolution_clock
 // Created by Ivan B on 2021/8/26.
 //
 
@@ -10,10 +10,12 @@
 
 namespace ivtb{
 
-class Stopwatch{
+
+template<class ClockType = std::chrono::high_resolution_clock>
+class StopwatchAny{
   public:
-    using Timestamp = std::chrono::high_resolution_clock::time_point;
-    using Duration = std::chrono::high_resolution_clock::duration;
+    using Timestamp = typename ClockType::time_point;
+    using Duration = typename ClockType::duration;
 
   private:
     Timestamp start_t;
@@ -21,7 +23,7 @@ class Stopwatch{
     bool paused = false;
 
   public:
-    inline explicit Stopwatch(bool paused = false){
+    inline explicit StopwatchAny(bool paused = false){
         if(paused){
             this->paused = true;
         }
@@ -32,7 +34,7 @@ class Stopwatch{
 
     // start all over
     inline void start(){
-        start_t = std::chrono::high_resolution_clock::now();
+        start_t = ClockType::now();
         accumulation = Duration();
         paused = false;
     }
@@ -40,12 +42,12 @@ class Stopwatch{
     inline void pause(){
         if(paused) return;
         paused = true;
-        accumulation += (std::chrono::high_resolution_clock::now() - start_t);
+        accumulation += (ClockType::now() - start_t);
     }
 
     inline void unpause(){
         paused = false;
-        start_t = std::chrono::high_resolution_clock::now();
+        start_t = ClockType::now();
     }
 
     inline double passedSeconds(){
@@ -63,12 +65,14 @@ class Stopwatch{
             return accumulation;
         }
         else{
-            return std::chrono::high_resolution_clock::now() - start_t + accumulation;
+            return ClockType::now() - start_t + accumulation;
         }
     }
 
 };
 
+using Stopwatch = ivtb::StopwatchAny<>;
+using StopwatchMono = ivtb::StopwatchAny<std::chrono::steady_clock>;
 
 }
 

@@ -63,6 +63,14 @@ class ClientBaseHandler {
     CallHandler sendIpc(std::unique_ptr<Message> request);
     Result<MessageWithProto> waitIpc(CallHandler &&call_handler, unsigned int timeout_ms = 0);
     Result<MessageWithProto> callIpc(std::unique_ptr<Message> request, unsigned int timeout_ms = 0);
+
+    /**
+     * Ping to check server connectivity
+     * @param timeout_ms total timeout in ms, considered connected if response received within this time
+     * @param retry_ms ping period
+     * @return whether connected
+     */
+    bool ping(unsigned int timeout_ms, unsigned int retry_ms);
 };
 
 }

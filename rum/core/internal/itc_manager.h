@@ -34,6 +34,8 @@ struct ItcManager {
 
     bool scheduleItc(const std::string &topic, const std::shared_ptr<const void> &msg); RUM_THREAD_SAFE
 
+    bool haveSub(const std::string &topic); RUM_THREAD_SAFE
+
     // on pub creation
 
 };

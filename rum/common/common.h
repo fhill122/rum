@@ -35,6 +35,10 @@ constexpr char kSrvReqTopicPrefix[] = "__q_";
 // service response pub sub is prefixes with this + node_string + "_"
 constexpr char kSrvRepTopicPrefix[] = "__p_";
 
+// reserved protocol prefix
+constexpr char kProtocolReserve[] = "__";
+constexpr char kPingProtocol[] = "__ping";
+
 constexpr char kIpEnv[] = "RUM_IP";
 constexpr char kMasterPortInEnv[] = "RUM_MASTER_IN";
 constexpr char kMasterPortOutEnv[] = "RUM_MASTER_OUT";

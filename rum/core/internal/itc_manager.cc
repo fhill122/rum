@@ -51,4 +51,9 @@ bool ItcManager::scheduleItc(const string &topic, const shared_ptr<const void> &
     return true;
 }
 
+bool ItcManager::haveSub(const string &topic) {
+    lock_guard lock(mu);
+    return subs.find(topic)!=subs.end();
+}
+
 }

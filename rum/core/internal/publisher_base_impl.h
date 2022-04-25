@@ -38,7 +38,7 @@ class PublisherBaseImpl {
     const msg::MsgType msg_type_;
 
   private:
-  protected:
+    // flatbuffers::FlatBufferBuilder* createRepFbs(unsigned int id, char status, bool ping);
 
   public:
     PublisherBaseImpl(std::string topic, std::string protocol, std::shared_ptr<zmq::context_t> context,
@@ -59,11 +59,22 @@ class PublisherBaseImpl {
     bool publishIpc(zmq::message_t &header, zmq::message_t &body);
     bool publishIpc(zmq::message_t &body);
     bool publishIpc(zmq::message_t &&body){ return publishIpc(body);}
+
     // srv
-    bool publishReqIpc(unsigned int id, zmq::message_t &body);
-    bool publishRepIpc(unsigned int id, char status, zmq::message_t &body);
+    bool publishReqIpc(unsigned int id, zmq::message_t &body, const char* protocol=nullptr);
+    bool publishPingReq(unsigned int id){
+        zmq::message_t msg{0};
+        return publishReqIpc(id, msg, kPingProtocol);
+    }
+
+    bool publishRepIpc(unsigned int id, char status, zmq::message_t &body, const char* protocol=nullptr);
+    bool publishPingRep(unsigned int id){
+        zmq::message_t msg{0};
+        return publishRepIpc(id, 0, msg, kPingProtocol);
+    }
 
     bool scheduleItc(const std::shared_ptr<const void> &msg);
+    bool connectedItc();
 
     static int send(zmq::socket_t &socket, zmq::message_t &message, bool wait);
 
