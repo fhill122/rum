@@ -97,6 +97,44 @@ TEST_F(SimpleFbNode, BasicMixed){
     basicIntraP();
 }
 
+TEST_F(SimpleFbNode, Timeout){
+    client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
+
+    // intra process
+    {
+        server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv,
+                    bind(ServerFbCallback, placeholders::_1, placeholders::_2, 10, nullptr) );
+
+        bool ping_ok = client->ping(0, 0);
+        ASSERT_TRUE(ping_ok);
+
+        auto direct_res = client->callForeground(CreateReqeust(2), 15);
+        EXPECT_EQ(direct_res.status, SrvStatus::OK);
+
+        auto direct_res2 = client->callForeground(CreateReqeust(2), 1);
+        EXPECT_EQ(direct_res2.status, SrvStatus::Timeout);
+    }
+
+    // inter process
+    {
+        server.reset();
+        string cmd = argv0 + "_companion " + to_string(static_cast<int>(CompanionCmd::Timeout));
+        thread companion_t([&]{system(cmd.c_str());});
+
+        // todo ivan. seems we still have itc ping
+        bool ping_ok = client->ping(kNodeHbPeriod+1000, 100);
+        ASSERT_TRUE(ping_ok);
+
+        auto direct_res = client->callForeground(CreateReqeust(2), 15);
+        EXPECT_EQ(direct_res.status, SrvStatus::OK);
+
+        auto direct_res2 = client->callForeground(CreateReqeust(2), 1);
+        EXPECT_EQ(direct_res2.status, SrvStatus::Timeout);
+
+        companion_t.join();
+    }
+}
+
 //todo ivan.
 // multiple servers: itc, ipc, mixed (ping function required)
 // no connection, should return quickly (ping function required)

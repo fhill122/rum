@@ -38,6 +38,18 @@ void BasicTcpInterP(){
     }
 }
 
+void Timeout(){
+    atomic_int count{0};
+    auto server = CreateServer<Message,FbsBuilder,SerializerFbs>(
+            kSrv, bind(ServerFbCallback, placeholders::_1, placeholders::_2, 10, &count) );
+    Log::I(__func__, "sleep");
+    ivtb::StopwatchMono stopwatch;
+    while(stopwatch.passedMs()<kNodeHbPeriod+1000){
+        if (count.load()==2) break;
+        this_thread::sleep_for(100ms);
+    }
+}
+
 int main(int argc, char** argv){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::d);
 
@@ -51,6 +63,9 @@ int main(int argc, char** argv){
             break;
         case CompanionCmd::BasicTcpInterP:
             BasicTcpInterP();
+            break;
+        case CompanionCmd::Timeout:
+            Timeout();
             break;
         default:
             Log::E(__func__, "not implemented for %d", cmd);

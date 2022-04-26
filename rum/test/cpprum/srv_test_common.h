@@ -12,6 +12,7 @@ enum class CompanionCmd : int{
     BasicInterP = 0,
     BasicIpcInterP,
     BasicTcpInterP,
+    Timeout,
 };
 
 inline bool ServerFbCallback(const std::shared_ptr<const rum::Message> &request,
