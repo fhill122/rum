@@ -8,6 +8,7 @@ enum SyncType : byte {
 }
 
 table SubscriberInfo{
+    // normal topic or client exclusive rep topic
     topic:string;
     protocol:string;
 }

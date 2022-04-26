@@ -73,8 +73,10 @@ struct RemoteManager {
     unsigned long sync_count = 0;
     // <StrId, NodeInfo>
     std::unordered_map<std::string, std::unique_ptr<NodeInfo>> remote_book;
-    // <topic, NodeInfo>
+    // <topic, NodeInfo> sub topic includes normal topic, req topic, rep topic
     std::unordered_map<std::string, std::vector<NodeInfo*>> sub_book;
+    // <srv name, NodeInfo> exclusive subs' info, rep topics
+    std::unordered_map<std::string, std::vector<NodeInfo*>> exclusive_sub_book;
 
     static std::shared_ptr<RemoteManager>& GlobalManager();
 

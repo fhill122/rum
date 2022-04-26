@@ -50,13 +50,14 @@ inline std::string_view SrvFromReqTopic(const std::string &req_topic){
     return std::string_view(req_topic).substr(strlen(kSrvReqTopicPrefix));
 }
 
-inline std::string_view SrvFromRepTopic(const std::string &rep_topic){
+inline std::string_view SrvFromRepTopic(const char *rep_topic){
     std::string_view out(rep_topic);
     auto pos = out.find('_', strlen(kSrvRepTopicPrefix));
     AssertLog(pos!=std::string_view::npos, "");
     out.remove_prefix(pos+1);
     return out;
 }
+inline std::string_view SrvFromRepTopic(const std::string &rep_topic){ return SrvFromRepTopic(rep_topic.c_str());}
 
 inline std::string_view IdFromRepTopic(const std::string &rep_topic){
     std::string_view out(rep_topic);
@@ -64,6 +65,12 @@ inline std::string_view IdFromRepTopic(const std::string &rep_topic){
     AssertLog(pos!=std::string_view::npos, rep_topic);
     out.remove_prefix(strlen(kSrvRepTopicPrefix));
     out.remove_suffix(rep_topic.size()-pos-1);
+    return out;
+}
+
+inline std::string StrippedRepTopic(const std::string &rep_topic){
+    std::string out(kSrvRepTopicPrefix);
+    out.append(SrvFromRepTopic(rep_topic));
     return out;
 }
 

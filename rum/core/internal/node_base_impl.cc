@@ -304,6 +304,22 @@ ServerBaseImpl *NodeBaseImpl::addServer(const string &srv_name,
     auto server_add_future = sync_tp_->enqueue([&](){
         auto itr = servers_.find(srv_name);
         if (itr!=servers_.end()) return false;
+
+        // create new pub to exists remote clients.
+        std::unordered_map<std::string, std::vector<RemoteManager::NodeInfo*>> *book = &remote_manager_->exclusive_sub_book;
+
+        auto remote_itr = book->find(srv_name);
+        if (remote_itr!=book->end()){
+            for (const auto *node_info : remote_itr->second){
+                const auto* sync_fb = node_info->getSyncFb();
+                for (auto *cli : *sync_fb->clients()){
+                    auto *pub = internalAddPublisher(
+                            cli->topic()->str(), server->pub_protocol_, msg::MsgType::MsgType_ServiceResponse);
+                    server->addPub(pub);
+                }
+            }
+        }
+
         servers_[srv_name] = move(server);
         return true;
     });

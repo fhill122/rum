@@ -48,7 +48,8 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
             if (itr==pubs_.end()){
                 // request is faster than sync, pub not created yet
                 // todo ivan. wait? quick end instead of letting client wait?
-                log.w(string(srvName()), "request is faster than sync, pub not created yet");
+                log.w(string(srvName()), "request is faster than sync, pub %s not created yet",
+                      request->client_id.c_str());
             } else{
                 itr->second->publishPingRep(request->id);
             }
@@ -65,7 +66,8 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
         if (itr==pubs_.end()){
             // request is faster than sync, pub not created yet
             // todo ivan. wait? quick end instead of letting client wait?
-            log.w(string(srvName()), "request is faster than sync, pub not created yet");
+            log.w(string(srvName()), "request is faster than sync, pub %s not created yet",
+                  request->client_id.c_str());
             return;
         }
         if (ok){

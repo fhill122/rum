@@ -119,9 +119,12 @@ RemoteManager::NodeUpdate RemoteManager::wholeSyncUpdate(const void *fb_data, si
     }
     for (const auto &t: update.rep_topics_new) {
         MapVecAdd(sub_book, t, (NodeInfo *)node_p);
+        MapVecAdd(exclusive_sub_book, string(SrvFromRepTopic(t)),(NodeInfo *)node_p);
     }
     for (const auto &t: update.rep_topics_removed) {
         MapVecRemove(sub_book, t, node_p,
+                     [node_p](NodeInfo *n) { return n == node_p; });
+        MapVecRemove(exclusive_sub_book, string(SrvFromRepTopic(t)), node_p,
                      [node_p](NodeInfo *n) { return n == node_p; });
     }
 
@@ -150,6 +153,8 @@ std::vector<std::string> RemoteManager::checkAndRemove() {
         }
         for (auto *cli : *sync->clients()){
             MapVecRemove(sub_book, cli->topic()->str(), node_p,
+                         [node_p](NodeInfo *n){return n==node_p;} );
+            MapVecRemove(exclusive_sub_book, string(SrvFromRepTopic(cli->topic()->c_str())), node_p,
                          [node_p](NodeInfo *n){return n==node_p;} );
         }
     }

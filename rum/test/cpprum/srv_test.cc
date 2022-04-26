@@ -52,9 +52,10 @@ struct SimpleFbNode : public ::testing::Test{
     }
 
     void basicInterP(CompanionCmd companion_cmd){
-        client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
         string cmd = argv0 + "_companion " + to_string(static_cast<int>(companion_cmd));
         thread companion_t([&]{system(cmd.c_str());});
+
+        client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
 
         bool ping_ok = client->ping(kNodeHbPeriod+1000, 100);
         ASSERT_TRUE(ping_ok);
