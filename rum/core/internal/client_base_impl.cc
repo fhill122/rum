@@ -127,9 +127,13 @@ bool ClientBaseImpl::ping(unsigned int timeout_ms, unsigned int retry_ms) {
         if (pub_->connectedItc()) return true;
 
         // ping interP
-        auto awaiting_result = sendIpc(nullptr, true);
-        waitIpc(awaiting_result.get(), retry_ms);
-        if (awaiting_result->status==SrvStatus::OK) return true;
+        if (pub_->isConnected()){
+            auto awaiting_result = sendIpc(nullptr, true);
+            waitIpc(awaiting_result.get(), retry_ms);
+            if (awaiting_result->status==SrvStatus::OK) return true;
+        } else {
+            this_thread::sleep_for(retry_ms*1ms);
+        }
     } while(stopwatch.passedMs() < timeout_ms);
     return false;
 }
