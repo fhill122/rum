@@ -6,7 +6,7 @@
 
 #include <rum/cpprum/rum.h>
 #include <rum/common/common.h>
-
+#include <rum/extern/ivtb/stopwatch.h>
 #include <rum/serialization/flatbuffers/serializer_fbs.h>
 #include "../test_msg/test_number_generated.h"
 #include "srv_test_common.h"
@@ -62,7 +62,6 @@ struct SimpleFbNode : public ::testing::Test{
 
         auto req = CreateReqeust(1);
         uintptr_t req_address = reinterpret_cast<std::uintptr_t>(req->GetBufferPointer());
-        Log::W(__func__, "call");
         auto future_res = client->call(move(req), 50);
         auto result = future_res.future.get();
         ASSERT_EQ(result.status, SrvStatus::OK);
@@ -70,7 +69,6 @@ struct SimpleFbNode : public ::testing::Test{
         ASSERT_EQ(rep->n2(), 1+1);
         ASSERT_NE(rep->l1(), req_address);
 
-        Log::W(__func__, "call foreground");
         auto direct_res = client->callForeground(CreateReqeust(2), 50);
         ASSERT_EQ(direct_res.status, SrvStatus::OK);
         auto direct_rep = test::msg::GetNumber(direct_res.response->data());
@@ -121,7 +119,6 @@ TEST_F(SimpleFbNode, Timeout){
         string cmd = argv0 + "_companion " + to_string(static_cast<int>(CompanionCmd::Timeout));
         thread companion_t([&]{system(cmd.c_str());});
 
-        // todo ivan. seems we still have itc ping
         bool ping_ok = client->ping(kNodeHbPeriod+1000, 100);
         ASSERT_TRUE(ping_ok);
 
@@ -130,6 +127,47 @@ TEST_F(SimpleFbNode, Timeout){
 
         auto direct_res2 = client->callForeground(CreateReqeust(2), 1);
         EXPECT_EQ(direct_res2.status, SrvStatus::Timeout);
+
+        companion_t.join();
+    }
+}
+
+TEST_F(SimpleFbNode, SafeEnding){
+    client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
+
+    // intra process
+    {
+        server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv,
+            bind(ServerFbCallback, placeholders::_1, placeholders::_2, 10, nullptr) );
+
+        bool ping_ok = client->ping(0, 0);
+        ASSERT_TRUE(ping_ok);
+        FutureResult<Message> future_res1 = client->call(CreateReqeust(2), 15);
+        FutureResult<Message> future_res2 = client->call(CreateReqeust(2), 15);
+        // make sure server starts to precess
+        this_thread::sleep_for(1ms);
+
+        // server destroy should wait for the current task to be finished
+        ivtb::Stopwatch stopwatch;
+        server.reset();
+        EXPECT_NEAR(stopwatch.passedMs(), 10, 2);
+
+        ASSERT_EQ(future_res1.future.get().status, SrvStatus::OK);
+        ASSERT_EQ(future_res2.future.get().status, SrvStatus::Timeout);
+    }
+
+    // inter process
+    {
+        string cmd = argv0 + "_companion " + to_string(static_cast<int>(CompanionCmd::SafeEnding));
+        thread companion_t([&]{system(cmd.c_str());});
+
+        bool ping_ok = client->ping(kNodeHbPeriod+1000, 100);
+        ASSERT_TRUE(ping_ok);
+        FutureResult<Message> future_res1 = client->call(CreateReqeust(2), 15);
+        FutureResult<Message> future_res2 = client->call(CreateReqeust(2), 15);
+
+        ASSERT_EQ(future_res1.future.get().status, SrvStatus::OK);
+        ASSERT_EQ(future_res2.future.get().status, SrvStatus::Timeout);
 
         companion_t.join();
     }

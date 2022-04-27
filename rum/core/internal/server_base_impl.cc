@@ -56,7 +56,6 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
             return;
         }
 
-        // todo ivan. doing here. how to make sure safe removal? sub removed, long ongoing task is still here, when pub called it could be a null
         std::shared_ptr<Message> rep_message;
         auto request_message = static_pointer_cast<const Message>(request->request);
         bool ok = srv_func(request_message, request->protocol, rep_message);
