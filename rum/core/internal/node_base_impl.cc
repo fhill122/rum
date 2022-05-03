@@ -87,7 +87,7 @@ void NodeBaseImpl::updatePubConnection(const msg::NodeId *remote_node, RemoteMan
         auto itr = servers_.find(srv_name);
         if (itr==servers_.end()) continue;
         auto *server = itr->second.get();
-        auto *pub = server->removePub((string)IdFromRepTopic(rep_topic));
+        auto *pub = server->removePub(rep_topic);
         MapVecRemove(pubs_, pub->topic_, pub,
                      [pub](const unique_ptr<PublisherBaseImpl> &p){return p.get()==pub;});
     }

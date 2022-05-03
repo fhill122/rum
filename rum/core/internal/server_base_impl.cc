@@ -48,7 +48,7 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
             if (itr==pubs_.end()){
                 // request is faster than sync, pub not created yet
                 // todo ivan. wait? quick end instead of letting client wait?
-                log.w(string(srvName()), "request is faster than sync, pub %s not created yet",
+                log.w(string(srvName()), "ping request is faster than sync, pub %s not created yet",
                       request->client_id.c_str());
             } else{
                 itr->second->publishPingRep(request->id);
@@ -79,7 +79,7 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
 
 void ServerBaseImpl::addPub(PublisherBaseImpl* pub) {
     lock_guard lock(pubs_mu_);
-    auto itr = pubs_.find(pub->cli_id());
+    auto itr = pubs_.find(pub->topic_);
     AssertLog(itr==pubs_.end(), "");
     pubs_[pub->topic_] = pub;
 }
@@ -87,7 +87,7 @@ void ServerBaseImpl::addPub(PublisherBaseImpl* pub) {
 PublisherBaseImpl *ServerBaseImpl::removePub(const std::string &cli_id) {
     lock_guard lock(pubs_mu_);
     auto itr = pubs_.find(cli_id);
-    AssertLog(itr!=pubs_.end(), "");
+    AssertLog(itr!=pubs_.end(), cli_id + " not found");
     auto *pub = itr->second;
     pubs_.erase(itr);
     return pub;

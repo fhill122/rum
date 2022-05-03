@@ -73,7 +73,7 @@ void SubscriberBaseImpl::enqueue(const shared_ptr<SubMsg> &msg) {
         lock_guard lock(queue_mu_);
         msg_q_.push(msg);
         if (queue_size_>0 && msg_q_.size()>queue_size_){
-            // todo ivan. drop action
+            // todo ivan. drop action: for srv, it should quickly inform clients
             msg_q_.pop();
         }
     }
