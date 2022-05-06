@@ -179,11 +179,11 @@ bool SubContainer::loop() {
     }
     // for srv response, we do all the work here.
     else if (header_fb->type() == msg::MsgType_ServiceResponse){
-        lock_guard lock(ClientBaseImpl::wait_list_mu_);
+        lock_guard lock(AwaitingResult::wait_list_mu_);
         AssertLog(header_fb->extra_type()==msg::ExtraInfo_RepInfo, "");
         auto *rep_info = header_fb->extra_as_RepInfo();
-        auto itr = ClientBaseImpl::wait_list_.find(rep_info->id());
-        if (itr == ClientBaseImpl::wait_list_.end()){
+        auto itr = AwaitingResult::wait_list_.find(rep_info->id());
+        if (itr == AwaitingResult::wait_list_.end()){
             // already timed out
         } else{
             auto rep = make_shared<pair<shared_ptr<Message>, string>>();
@@ -199,7 +199,8 @@ bool SubContainer::loop() {
                 }
             }
             itr->second->cv.notify_one();
-            ClientBaseImpl::wait_list_.erase(itr);
+            // erase here is optional, as it will erase itself in destructor
+            AwaitingResult::wait_list_.erase(itr);
         }
     }
 

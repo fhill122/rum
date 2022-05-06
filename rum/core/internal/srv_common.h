@@ -18,6 +18,8 @@ namespace rum{
 
 struct AwaitingResult{
     static inline std::atomic<unsigned int> id_pool{1};
+    static inline std::unordered_map<unsigned int, AwaitingResult*> wait_list_{};  RUM_LOCK_BY(wait_list_mu_)
+    static inline std::mutex wait_list_mu_{};
 
     const unsigned int id;
     std::shared_ptr<const void> request = nullptr;
@@ -28,8 +30,34 @@ struct AwaitingResult{
     mutable std::mutex mu;
     mutable std::condition_variable cv;
 
-    // AwaitingResult(): id(id_pool.fetch_add(1, std::memory_order_relaxed)) {}
+  private:
     explicit AwaitingResult(unsigned int id) : id(id){}
+
+  public:
+    ~AwaitingResult(){
+        if (id==0) return;
+        std::lock_guard lock(wait_list_mu_);
+        wait_list_.erase(id);
+    }
+
+    inline static std::unique_ptr<AwaitingResult> CreateInterP(){
+        std::unique_ptr<AwaitingResult> awaiting_result;
+        std::lock_guard lock(wait_list_mu_);
+        while(true){
+            auto id = id_pool.fetch_add(1);
+            if (id==0) continue;
+            auto itr = wait_list_.find(id);
+            if (itr==wait_list_.end()){
+                awaiting_result = std::unique_ptr<AwaitingResult>(new AwaitingResult(id));
+                wait_list_.emplace(awaiting_result->id, awaiting_result.get());
+                return awaiting_result;
+            }
+        }
+    }
+
+    inline static std::unique_ptr<AwaitingResult> CreateIntraP(){
+        return std::unique_ptr<AwaitingResult>(new AwaitingResult(0));
+    }
 };
 
 inline std::string GetRepTopic(const std::string &srv_name, const std::string &node_str){

@@ -25,20 +25,7 @@ ClientBaseImpl::callIpc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
 }
 
 std::unique_ptr<AwaitingResult> ClientBaseImpl::sendIpc(std::unique_ptr<Message> req_msg, bool ping) {
-    unique_ptr<AwaitingResult> awaiting_result;
-    {
-        lock_guard lock(wait_list_mu_);
-        while(true){
-            auto id = AwaitingResult::id_pool.fetch_add(1);
-            if (id==0) continue;
-            auto itr = wait_list_.find(id);
-            if (itr==wait_list_.end()){
-                awaiting_result = make_unique<AwaitingResult>(id);
-                wait_list_.emplace(awaiting_result->id, awaiting_result.get());
-                break;
-            }
-        }
-    }
+    unique_ptr<AwaitingResult> awaiting_result = AwaitingResult::CreateInterP();
 
     // unlike itc, we do not check pub's connection here, as it would be checked before this call to prevent
     // unnecessary serialization
@@ -66,8 +53,8 @@ void ClientBaseImpl::waitIpc(AwaitingResult *awaiting_result, unsigned int timeo
     // erase only if timeout to reduce lock
     if (!got_result){
         {
-            lock_guard lock(wait_list_mu_);
-            size_t n_removed = wait_list_.erase(awaiting_result->id);
+            lock_guard lock(AwaitingResult::wait_list_mu_);
+            size_t n_removed = AwaitingResult::wait_list_.erase(awaiting_result->id);
         }
         // n_removed could be 0 if server just responded after wait_for finished
         awaiting_result->status = SrvStatus::Timeout;
@@ -86,7 +73,7 @@ ClientBaseImpl::callItc(const shared_ptr<const void> &req_obj, unsigned int time
 }
 
 std::shared_ptr<AwaitingResult> ClientBaseImpl::sendItc(const shared_ptr<const void> &req_obj) {
-    auto awaiting_result = make_shared<AwaitingResult>(0);
+    shared_ptr<AwaitingResult> awaiting_result = AwaitingResult::CreateIntraP();
     awaiting_result->request = req_obj;
     // no need to add to wait_list
     bool scheduled = pub_->scheduleItc(awaiting_result);

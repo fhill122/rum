@@ -29,7 +29,6 @@ struct CallHandler{
 
     /**
      * Get current SrvStatus of the service call.
-     * todo ivan. this is kind of ugly that we expose this internal api
      * @return status
      */
     SrvStatus getCurrentStatus() const;

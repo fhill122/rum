@@ -22,9 +22,6 @@ class ClientBaseImpl {
     // we need a dummy response sub to set up syncs
     SubscriberBaseImpl* sub_;
 
-    // if this is static, we could eliminate sub_
-    static inline std::unordered_map<unsigned int, AwaitingResult*> wait_list_{};  RUM_LOCK_BY(wait_list_mu_)
-    static inline std::mutex wait_list_mu_{};
     static inline std::shared_ptr<ThreadPool> sub_dumb_tp_ = std::make_shared<ThreadPool>();
 
   private:
