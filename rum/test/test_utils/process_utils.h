@@ -31,6 +31,28 @@ inline bool LaunchProcess(std::string command){
     return true;
 }
 
+class DaemonProcess{
+  private:
+    std::thread thread_;
+
+  public:
+    DaemonProcess(const std::string &command){
+        thread_ = std::thread([command]{ LaunchProcess(command);});
+    }
+
+    DaemonProcess(const DaemonProcess&) = delete;
+    DaemonProcess& operator=(const DaemonProcess&) = delete;
+    DaemonProcess(DaemonProcess&&) = default;
+    DaemonProcess& operator=(DaemonProcess&&) = default;
+
+    ~DaemonProcess(){
+        if(thread_.joinable())
+            thread_.join();
+    }
+
+    std::thread &getThread(){return thread_;}
+};
+
 
 }
 

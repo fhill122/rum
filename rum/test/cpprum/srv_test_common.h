@@ -14,6 +14,8 @@ enum class CompanionCmd : int{
     BasicTcpInterP,
     Timeout,
     SafeEnding,
+    Cancelling,
+    Overflow,
 };
 
 inline bool ServerFbCallback(const std::shared_ptr<const rum::Message> &request,
@@ -26,7 +28,10 @@ inline bool ServerFbCallback(const std::shared_ptr<const rum::Message> &request,
                 NodeBase::GlobalNode()->getStrId().c_str(), req->n1());
     response->Finish(rum::test::msg::CreateNumber(*response, req->n1(), req->n1() + 1,
                                                   reinterpret_cast<std::uintptr_t>(request->data())));
-    if(sleep_ms>0) this_thread::sleep_for(sleep_ms * 1ms);
+    if(sleep_ms>0) {
+        this_thread::sleep_for(sleep_ms * 1ms);
+        rum::Log::D(__func__, "sleep finished");
+    }
     return true;
 }
 
