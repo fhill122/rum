@@ -72,7 +72,8 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
         if (ok){
             itr->second->publishRepIpc(request->id, 0, *rep_message);
         } else{
-            itr->second->publishRepIpc(request->id, 1, *rep_message);
+            Message empty_rep{0};
+            itr->second->publishRepIpc(request->id, 1, empty_rep);
         }
     };
 }

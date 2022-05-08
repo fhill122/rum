@@ -21,77 +21,141 @@ struct SimpleFbNode : public ::testing::Test{
     Client<FbsBuilder, Message>::UniquePtr  client = nullptr;
     Server::UniquePtr server = nullptr;
 
-    static unique_ptr<FbsBuilder> CreateReqeust(int x){
-        auto builder = make_unique<FbsBuilder>();
-        auto point = test::msg::CreateNumber(*builder, x);
-        builder->Finish(point);
-        return builder;
-    }
-
-    void basicIntraP(){
+    void basicIntraP(unique_ptr<FbsBuilder> req_builder,
+                     bool async = true,
+                     SrvStatus expect = SrvStatus::OK){
         client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
+        server.reset();
         server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv,
                              bind(ServerFbCallback, placeholders::_1, placeholders::_2, 0, nullptr) );
 
         bool ping_ok = client->ping(0, 0);
         ASSERT_TRUE(ping_ok);
 
-        auto req = CreateReqeust(1);
-        uintptr_t req_address = reinterpret_cast<std::uintptr_t>(req->GetBufferPointer());
-        auto future_res = client->call(move(req), 50);
-        auto result = future_res.future.get();
-        ASSERT_EQ(result.status, SrvStatus::OK);
-        auto rep = test::msg::GetNumber(result.response->data());
-        ASSERT_EQ(rep->n2(), 1+1);
-        // itc takes place
-        ASSERT_EQ(rep->l1(), req_address);
+        uintptr_t req_address = reinterpret_cast<std::uintptr_t>(req_builder->GetBufferPointer());
+        const auto *req = rum::test::msg::GetNumber(req_builder->GetBufferPointer());
+        const test::msg::Number *rep;
 
-        auto direct_res = client->callForeground(CreateReqeust(2), 50);
-        ASSERT_EQ(direct_res.status, SrvStatus::OK);
-        auto direct_rep = test::msg::GetNumber(direct_res.response->data());
-        ASSERT_EQ(direct_rep->n2(), 2+1);
+        // async call
+        if (async){
+            auto future_res = client->call(move(req_builder), 50);
+            auto result = future_res.future.get();
+            ASSERT_EQ(result.status, expect);
+            if (result.status!=SrvStatus::OK) return;
+            rep = test::msg::GetNumber(result.response->data());
+        }
+        // foreground call
+        else {
+            auto direct_res = client->callForeground(move(req_builder), 50);
+            ASSERT_EQ(direct_res.status, expect);
+            if (direct_res.status!=SrvStatus::OK) return;
+            rep = test::msg::GetNumber(direct_res.response->data());
+        }
+
+        // check response
+        ASSERT_EQ(rep->n2(), req->n1()+1);
+        // same memory address
+        ASSERT_EQ(rep->l1(), req_address);
     }
 
-    void basicInterP(CompanionCmd companion_cmd){
+    void basicInterP(unique_ptr<FbsBuilder> req_builder,
+                     CompanionCmd companion_cmd,
+                     bool async = true,
+                     SrvStatus expect = SrvStatus::OK){
         string cmd = argv0 + "_companion " + to_string(static_cast<int>(companion_cmd));
         DaemonProcess daemon_process(cmd);
 
+        server.reset();
         client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
 
         bool ping_ok = client->ping(kNodeHbPeriod+1000, 100);
         ASSERT_TRUE(ping_ok);
 
-        auto req = CreateReqeust(1);
-        uintptr_t req_address = reinterpret_cast<std::uintptr_t>(req->GetBufferPointer());
-        auto future_res = client->call(move(req), 50);
-        auto result = future_res.future.get();
-        ASSERT_EQ(result.status, SrvStatus::OK);
-        auto rep = test::msg::GetNumber(result.response->data());
-        ASSERT_EQ(rep->n2(), 1+1);
-        ASSERT_NE(rep->l1(), req_address);
+        uintptr_t req_address = reinterpret_cast<std::uintptr_t>(req_builder->GetBufferPointer());
+        const auto *req = rum::test::msg::GetNumber(req_builder->GetBufferPointer());
+        const test::msg::Number *rep;
 
-        auto direct_res = client->callForeground(CreateReqeust(2), 50);
-        ASSERT_EQ(direct_res.status, SrvStatus::OK);
-        auto direct_rep = test::msg::GetNumber(direct_res.response->data());
-        ASSERT_EQ(direct_rep->n2(), 2+1);
+        // async call
+        if (async){
+            auto future_res = client->call(move(req_builder), 50);
+            auto result = future_res.future.get();
+            ASSERT_EQ(result.status, expect);
+            if (result.status!=SrvStatus::OK) return;
+            rep = test::msg::GetNumber(result.response->data());
+        }
+        // foreground call
+        else {
+            auto direct_res = client->callForeground(move(req_builder), 50);
+            ASSERT_EQ(direct_res.status, expect);
+            if (direct_res.status!=SrvStatus::OK) return;
+            rep = test::msg::GetNumber(direct_res.response->data());
+        }
+
+        // check response
+        ASSERT_EQ(rep->n2(), req->n1()+1);
+        ASSERT_NE(rep->l1(), req_address);
     }
 };
 
 TEST_F(SimpleFbNode, BasicIntraP){
-    basicIntraP();
+    basicIntraP(CreateReqeust(1,0,1), true, SrvStatus::OK);
+    basicIntraP(CreateReqeust(1,0,1), false, SrvStatus::OK);
+    basicIntraP(CreateReqeust(1,1,0), true, SrvStatus::ServerErr);
+    basicIntraP(CreateReqeust(1,1,0), false, SrvStatus::ServerErr);
 }
 
 TEST_F(SimpleFbNode, BasicInterP){
-    basicInterP(CompanionCmd::BasicInterP);
+    // basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, true, SrvStatus::OK);
+    // basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, false, SrvStatus::OK);
+    // basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicInterP, true, SrvStatus::ServerErr);
+    basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicInterP, false, SrvStatus::ServerErr);
+}
+
+// local server, remote client
+TEST_F(SimpleFbNode, BasicInterP2){
+    string cmd = argv0 + "_companion " + to_string(static_cast<int>(CompanionCmd::BasicInterP2));
+    DaemonProcess daemon_process(cmd);
+
+    server.reset();
+    atomic_int count{0};
+    auto server = CreateServer<Message,FbsBuilder,SerializerFbs>(
+            kSrv, bind(ServerFbCallback, placeholders::_1, placeholders::_2, 0, &count) );
+    Log::I(__func__, "sleep");
+    ivtb::StopwatchMono stopwatch;
+    while(stopwatch.passedMs()<kNodeHbPeriod+1000){
+        if (count.load()==1) break;
+        this_thread::sleep_for(10ms);
+    }
+    EXPECT_EQ(count.load(), 1);
 }
 
 TEST_F(SimpleFbNode, BasicTcpInterP){
-    basicInterP(CompanionCmd::BasicTcpInterP);
+    basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicTcpInterP, true, SrvStatus::OK);
+    basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicTcpInterP, false, SrvStatus::OK);
+    basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicTcpInterP, true, SrvStatus::ServerErr);
+    basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicTcpInterP, false, SrvStatus::ServerErr);
 }
 
 TEST_F(SimpleFbNode, BasicMixed){
-    basicInterP(CompanionCmd::BasicInterP);
-    basicIntraP();
+    basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, true, SrvStatus::OK);
+
+    // test intra process while exist remote server
+    string cmd = argv0 + "_companion " + to_string(static_cast<int>(CompanionCmd::BasicInterP));
+    DaemonProcess daemon_process(cmd);
+    basicIntraP(CreateReqeust(1,0,1), true, SrvStatus::OK);
+}
+
+TEST_F(SimpleFbNode, DuplicateServers){
+    constexpr int kNServer = 3;
+    vector<DaemonProcess> daemons;
+    daemons.reserve(kNServer-1);
+    string cmd = argv0 + "_companion " + to_string(static_cast<int>(CompanionCmd::BasicTcpInterP));
+    for (int i = 0; i < kNServer-1; ++i) {
+        daemons.emplace_back(cmd);
+    }
+
+    // should work just like normal, taking the response only from the fastest server
+    basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, true, SrvStatus::OK);
 }
 
 TEST_F(SimpleFbNode, Timeout){
@@ -188,20 +252,20 @@ TEST_F(SimpleFbNode, Cancelling) {
     client = CreateClient<FbsBuilder, Message, SerializerFbs>(kSrv);
 
     // intra process
-    // {
-    //     server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv,
-    //              bind(ServerFbCallback, placeholders::_1, placeholders::_2, 10, nullptr) );
-    //     ivtb::Stopwatch stopwatch;
-    //     FutureResult<Message> future_res = client->call(CreateReqeust(2), 15);
-    //     bool cancelled = future_res.cancel();
-    //     // cancel should be instant
-    //     ASSERT_LE(stopwatch.passedMs(), 2);
-    //     ASSERT_TRUE(cancelled);
-    //     // repeated cancel should return false
-    //     cancelled = future_res.cancel();
-    //     ASSERT_FALSE(cancelled);
-    //     server.reset();
-    // }
+    {
+        server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv,
+                 bind(ServerFbCallback, placeholders::_1, placeholders::_2, 10, nullptr) );
+        ivtb::Stopwatch stopwatch;
+        FutureResult<Message> future_res = client->call(CreateReqeust(2), 15);
+        bool cancelled = future_res.cancel();
+        // cancel should be instant
+        ASSERT_LE(stopwatch.passedMs(), 2);
+        ASSERT_TRUE(cancelled);
+        // repeated cancel should return false
+        cancelled = future_res.cancel();
+        ASSERT_FALSE(cancelled);
+        server.reset();
+    }
 
     // inter process
     {
@@ -262,16 +326,8 @@ TEST_F(SimpleFbNode, Overflow) {
     }
 }
 
-TEST_F(SimpleFbNode, DuplicateServers){
-    client = CreateClient<FbsBuilder, Message, SerializerFbs>(kSrv);
-
-
-}
-
 //todo ivan.
-// multiple servers: itc, ipc, mixed (ping function required)
 // different serializer for req and rep
-// server cb err, serialization err, crash
 // threadpool
 
 
@@ -283,7 +339,7 @@ int main(int argc, char **argv){
 
     ::testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "*Cancelling";
-    // ::testing::GTEST_FLAG(filter) = "*BasicInterP";
+    ::testing::GTEST_FLAG(filter) = "*BasicInterP2";
     int res =  RUN_ALL_TESTS();
 
     rum::printer.i(__func__, "all done");
