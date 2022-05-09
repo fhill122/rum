@@ -105,10 +105,46 @@ TEST_F(SimpleFbNode, BasicIntraP){
 }
 
 TEST_F(SimpleFbNode, BasicInterP){
-    // basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, true, SrvStatus::OK);
-    // basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, false, SrvStatus::OK);
-    // basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicInterP, true, SrvStatus::ServerErr);
+    basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, true, SrvStatus::OK);
+    basicInterP(CreateReqeust(1,0,1), CompanionCmd::BasicInterP, false, SrvStatus::OK);
+    basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicInterP, true, SrvStatus::ServerErr);
     basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicInterP, false, SrvStatus::ServerErr);
+}
+
+TEST_F(SimpleFbNode, MultiThreads){
+    constexpr int kNumThreads = 4;
+    constexpr int kSleepMs = 10;
+
+    client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
+    server = CreateServer<Message, FbsBuilder, SerializerFbs>(kSrv,
+             bind(ServerFbCallback, placeholders::_1, placeholders::_2, kSleepMs, nullptr),
+             10, make_shared<ThreadPool>(4));
+
+    ThreadPool call_tp(kNumThreads*2);
+    for (int i = 0; i < kNumThreads; ++i) {
+        call_tp.enqueue([this](){
+            ivtb::Stopwatch stopwatch;
+            // server sleep could be very inaccurate
+            auto result = client->callForeground(CreateReqeust(1), kSleepMs+3);
+            EXPECT_EQ(result.status, SrvStatus::OK);
+            EXPECT_LE(stopwatch.passedMs(), kSleepMs+3);
+        });
+    }
+
+    // these calls should be delayed
+    this_thread::sleep_for(1ms);
+    for (int i = 0; i < kNumThreads; ++i) {
+        call_tp.enqueue([this](){
+            ivtb::Stopwatch stopwatch;
+            // server sleep could be very inaccurate
+            auto result = client->callForeground(CreateReqeust(1), 2*kSleepMs+6);
+            EXPECT_EQ(result.status, SrvStatus::OK);
+            EXPECT_LE(stopwatch.passedMs(), 2*kSleepMs+6);
+            EXPECT_GE(stopwatch.passedMs(), kSleepMs+0);
+        });
+    }
+
+    call_tp.stopAndWait();
 }
 
 // local server, remote client
@@ -339,7 +375,6 @@ int main(int argc, char **argv){
 
     ::testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "*Cancelling";
-    ::testing::GTEST_FLAG(filter) = "*BasicInterP2";
     int res =  RUN_ALL_TESTS();
 
     rum::printer.i(__func__, "all done");

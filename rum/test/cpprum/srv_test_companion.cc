@@ -18,7 +18,7 @@ void BasicInterP(){
     Log::I(__func__, "sleep");
     ivtb::StopwatchMono stopwatch;
     while(stopwatch.passedMs()<kNodeHbPeriod+1000){
-        if (count.load()==2) break;
+        if (count.load()==1) break;
         this_thread::sleep_for(10ms);
     }
 }
@@ -33,10 +33,19 @@ void BasicTcpInterP(){
     Log::I(__func__, "sleep");
     ivtb::StopwatchMono stopwatch;
     while(stopwatch.passedMs()<kNodeHbPeriod+1000){
-        if (count.load()==2) break;
+        if (count.load()==1) break;
         this_thread::sleep_for(10ms);
     }
 }
+
+void BasicInterP2(){
+    auto client = CreateClient<FbsBuilder,Message,SerializerFbs>(kSrv);
+    bool ping_ok = client->ping(kNodeHbPeriod+1000, 100);
+    AssertLog(ping_ok, "ping failed");
+
+    auto direct_res = client->callForeground(CreateReqeust(1,1,0), 50);
+    AssertLog(direct_res.status==SrvStatus::ServerErr, "");
+};
 
 void Timeout(){
     atomic_int count{0};
@@ -96,6 +105,9 @@ int main(int argc, char** argv){
     switch (cmd) {
         case CompanionCmd::BasicInterP:
             BasicInterP();
+            break;
+        case CompanionCmd::BasicInterP2:
+            BasicInterP2();
             break;
         case CompanionCmd::BasicTcpInterP:
             BasicTcpInterP();
