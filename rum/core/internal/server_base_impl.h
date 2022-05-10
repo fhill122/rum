@@ -26,8 +26,8 @@ class ServerBaseImpl {
 
     inline void setSub(SubscriberBaseImpl *sub) {sub_ = sub;}
 
-    ItcFunc genSubItc(const SrvItcFunc& srv_func);
-    IpcFunc genSubIpc(const SrvIpcFunc& srv_func);
+    IntraProcFunc genSubIntraProc(const SrvIntraProcFunc& srv_func);
+    InterProcFunc genSubInterProc(const SrvInterProcFunc& srv_func);
 
     std::string_view srvName() const {return SrvFromReqTopic(sub_->topic_);}
 

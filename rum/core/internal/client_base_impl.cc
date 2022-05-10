@@ -18,26 +18,26 @@ ClientBaseImpl::ClientBaseImpl(PublisherBaseImpl* pub, SubscriberBaseImpl* sub):
         pub_(pub), sub_(sub){}
 
 unique_ptr<AwaitingResult>
-ClientBaseImpl::callIpc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
-    auto awaiting_result = sendIpc(move(req_msg));
-    waitIpc(awaiting_result.get(), timeout_ms);
+ClientBaseImpl::callInterProc(unique_ptr<Message> req_msg, unsigned int timeout_ms) {
+    auto awaiting_result = sendInterProc(move(req_msg));
+    waitIterProc(awaiting_result.get(), timeout_ms);
     return awaiting_result;
 }
 
-std::unique_ptr<AwaitingResult> ClientBaseImpl::sendIpc(std::unique_ptr<Message> req_msg, bool ping) {
+std::unique_ptr<AwaitingResult> ClientBaseImpl::sendInterProc(std::unique_ptr<Message> req_msg, bool ping) {
     unique_ptr<AwaitingResult> awaiting_result = AwaitingResult::CreateInterP();
 
-    // unlike itc, we do not check pub's connection here, as it would be checked before this call to prevent
+    // unlike intra process, we do not check pub's connection here, as it would be checked before this call to prevent
     // unnecessary serialization
     if (ping){
         pub_->publishPingReq(awaiting_result->id);
     } else{
-        pub_->publishReqIpc(awaiting_result->id, *req_msg);
+        pub_->publishReq(awaiting_result->id, *req_msg);
     }
     return awaiting_result;
 }
 
-void ClientBaseImpl::waitIpc(AwaitingResult *awaiting_result, unsigned int timeout_ms) {
+void ClientBaseImpl::waitIterProc(AwaitingResult *awaiting_result, unsigned int timeout_ms) {
     // wait until got result or timeout
     bool got_result = true;
     unique_lock result_lock(awaiting_result->mu);
@@ -66,44 +66,44 @@ void ClientBaseImpl::waitIpc(AwaitingResult *awaiting_result, unsigned int timeo
 }
 
 shared_ptr<AwaitingResult>
-ClientBaseImpl::callItc(const shared_ptr<const void> &req_obj, unsigned int timeout_ms) {
-    auto awaiting_result = sendItc(req_obj);
-    waitItc(awaiting_result.get(), timeout_ms);
+ClientBaseImpl::callIntraProc(const shared_ptr<const void> &req_obj, unsigned int timeout_ms) {
+    auto awaiting_result = sendIntraProc(req_obj);
+    waitIntraProc(awaiting_result.get(), timeout_ms);
     return awaiting_result;
 }
 
-std::shared_ptr<AwaitingResult> ClientBaseImpl::sendItc(const shared_ptr<const void> &req_obj) {
+std::shared_ptr<AwaitingResult> ClientBaseImpl::sendIntraProc(const shared_ptr<const void> &req_obj) {
     shared_ptr<AwaitingResult> awaiting_result = AwaitingResult::CreateIntraP();
     awaiting_result->request = req_obj;
     // no need to add to wait_list
-    bool scheduled = pub_->scheduleItc(awaiting_result);
+    bool scheduled = pub_->scheduleIntraProc(awaiting_result);
     if (!scheduled){
         awaiting_result->status = SrvStatus::NoConnections;
     }
     return awaiting_result;
 }
 
-void ClientBaseImpl::waitItc(AwaitingResult* awaiting_result, unsigned int timeout_ms) {
-    if (awaiting_result->status == SrvStatus::NoConnections) return;
+void ClientBaseImpl::waitIntraProc(AwaitingResult* awaiting, unsigned int timeout_ms) {
+    if (awaiting->status == SrvStatus::NoConnections) return;
 
     // wait until got result or timeout
     bool got_result = true;
-    unique_lock result_lock(awaiting_result->mu);
-    auto stop_waiting = [&awaiting_result](){
-        return awaiting_result->response!=nullptr || awaiting_result->status==SrvStatus::Cancelled;};
+    unique_lock result_lock(awaiting->mu);
+    auto stop_waiting = [&awaiting](){
+        return awaiting->response!=nullptr || awaiting->status==SrvStatus::Cancelled;};
     if (timeout_ms){
         // gcc bug before gcc10? https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41861
-        got_result = awaiting_result->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms), stop_waiting);
+        got_result = awaiting->cv.wait_for(result_lock, chrono::milliseconds(timeout_ms), stop_waiting);
     } else{
-        awaiting_result->cv.wait(result_lock, stop_waiting);
+        awaiting->cv.wait(result_lock, stop_waiting);
     }
 
     if (!got_result){
-        awaiting_result->status = SrvStatus::Timeout;
+        awaiting->status = SrvStatus::Timeout;
     } else{
         // awaiting_result is set by server
-        if (awaiting_result->status == SrvStatus::OK)
-            AssertLog(awaiting_result->response, "ok but null");
+        if (awaiting->status == SrvStatus::OK)
+            AssertLog(awaiting->response, "ok but null");
     }
 }
 
@@ -111,12 +111,12 @@ bool ClientBaseImpl::ping(unsigned int timeout_ms, unsigned int retry_ms) {
     ivtb::StopwatchMono stopwatch;
     do{
         // check intraP
-        if (pub_->connectedItc()) return true;
+        if (pub_->connectedIntraProc()) return true;
 
         // ping interP
         if (pub_->isConnected()){
-            auto awaiting_result = sendIpc(nullptr, true);
-            waitIpc(awaiting_result.get(), retry_ms);
+            auto awaiting_result = sendInterProc(nullptr, true);
+            waitIterProc(awaiting_result.get(), retry_ms);
             if (awaiting_result->status==SrvStatus::OK) return true;
         } else {
             this_thread::sleep_for(retry_ms*1ms);

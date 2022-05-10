@@ -45,13 +45,13 @@ SubscriberBaseHandler
 NodeBase::addSubscriber(const std::string &topic,
                         const shared_ptr<ThreadPool> &tp,
                         size_t queue_size,
-                        const IpcFunc &ipc_cb,
-                        const ItcFunc &itc_cb,
+                        const InterProcFunc &inter_cb,
+                        const IntraProcFunc &intra_cb,
                         const DeserFunc<> &deserialize_f,
                         const std::string &protocol) {
     AssertLog(!StrStartWith(topic, kTopicReserve), "reserved topic name");
     AssertLog(tp->threads()>0, "empty thread pool");
-    return SubscriberBaseHandler(pimpl_->addSubscriber(topic, tp, queue_size, ipc_cb, itc_cb, deserialize_f, protocol));
+    return SubscriberBaseHandler(pimpl_->addSubscriber(topic, tp, queue_size, inter_cb, intra_cb, deserialize_f, protocol));
 }
 
 void NodeBase::removeSubscriber(SubscriberBaseHandler &subscriber_handler) {
@@ -83,13 +83,13 @@ void NodeBase::removeClient(ClientBaseHandler &client_handler) {
 ServerBaseHandler NodeBase::addServer(const string &srv_name,
                                       const shared_ptr<ThreadPool> &tp,
                                       size_t queue_size,
-                                      const SrvIpcFunc &ipc_func,
-                                      const SrvItcFunc &itc_func,
+                                      const SrvInterProcFunc &inter_f,
+                                      const SrvIntraProcFunc &intra_f,
                                       const string &req_protocol,
                                       const string &rep_protocol) {
     AssertLog(!StrStartWith(srv_name, kTopicReserve), "reserved srv name");
     return ServerBaseHandler(pimpl_->addServer(srv_name, tp, queue_size,
-                                               ipc_func, itc_func, req_protocol, rep_protocol));
+                                               inter_f, intra_f, req_protocol, rep_protocol));
 }
 
 void NodeBase::removeServer(ServerBaseHandler &server_handler) {

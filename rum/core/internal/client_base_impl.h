@@ -29,13 +29,13 @@ class ClientBaseImpl {
     // creation need: srv_name, pub_proto
     ClientBaseImpl(PublisherBaseImpl* pub, SubscriberBaseImpl* sub);
 
-    std::shared_ptr<AwaitingResult> callItc(const std::shared_ptr<const void> &req_obj, unsigned int timeout_ms = 0);
-    std::shared_ptr<AwaitingResult> sendItc(const std::shared_ptr<const void> &req_obj);
-    void waitItc(AwaitingResult* awaiting, unsigned int timeout_ms = 0);
+    std::shared_ptr<AwaitingResult> callIntraProc(const std::shared_ptr<const void> &req_obj, unsigned int timeout_ms = 0);
+    std::shared_ptr<AwaitingResult> sendIntraProc(const std::shared_ptr<const void> &req_obj);
+    void waitIntraProc(AwaitingResult* awaiting, unsigned int timeout_ms = 0);
 
-    std::unique_ptr<AwaitingResult> callIpc(std::unique_ptr<Message> req_msg, unsigned int timeout_ms = 0);
-    std::unique_ptr<AwaitingResult> sendIpc(std::unique_ptr<Message> req_msg, bool ping=false);
-    void waitIpc(AwaitingResult* awaiting, unsigned int timeout_ms = 0);
+    std::unique_ptr<AwaitingResult> callInterProc(std::unique_ptr<Message> req_msg, unsigned int timeout_ms = 0);
+    std::unique_ptr<AwaitingResult> sendInterProc(std::unique_ptr<Message> req_msg, bool ping=false);
+    void waitIterProc(AwaitingResult* awaiting_result, unsigned int timeout_ms = 0);
 
     bool ping(unsigned int timeout_ms, unsigned int retry_ms);
 

@@ -23,7 +23,7 @@ struct AwaitingResult{
 
     const unsigned int id;
     std::shared_ptr<const void> request = nullptr;
-    // pair<shared_ptr<Message>,protocol string> for ipc case
+    // pair<shared_ptr<Message>,protocol string> for inter-proc case
     std::shared_ptr<void> response = nullptr;
     SrvStatus status = SrvStatus::OK;
     // todo ivan. RemoteManager like heartbeat, so we could stop waiting smartly

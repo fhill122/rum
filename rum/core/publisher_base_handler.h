@@ -32,7 +32,7 @@ class PublisherBaseHandler {
 
     bool pub(Message &message);
 
-    bool scheduleItc(const std::shared_ptr<const void> &msg);
+    bool scheduleIntraProc(const std::shared_ptr<const void> &msg);
 };
 
 }

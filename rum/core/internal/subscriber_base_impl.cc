@@ -16,7 +16,7 @@ using namespace std;
 
 namespace rum{
 
-void SubscriberBaseImpl::TopicIpcMsg::processSelf(SubscriberBaseImpl *sub) {
+void SubscriberBaseImpl::TopicInterProcMsg::processSelf(SubscriberBaseImpl *sub) {
     {
         lock_guard lock(deserialize_mu);
         if (!deserialized_obj){
@@ -25,16 +25,16 @@ void SubscriberBaseImpl::TopicIpcMsg::processSelf(SubscriberBaseImpl *sub) {
     }
 
     if (deserialized_obj){
-        sub->ipc_callback_(deserialized_obj);
+        sub->inter_proc_callback_(deserialized_obj);
     } else{
         log.e(sub->topic_+"_sub", "failed to deserialize");
     }
 }
 
-void SubscriberBaseImpl::TopicIpcMsgOwned::processSelf(SubscriberBaseImpl *sub) {
+void SubscriberBaseImpl::TopicInterProcMsgOwned::processSelf(SubscriberBaseImpl *sub) {
     auto deserialized_obj = sub->deserialize_f_(msg, protocol);
     if (deserialized_obj){
-        sub->ipc_callback_(deserialized_obj);
+        sub->inter_proc_callback_(deserialized_obj);
     } else{
         log.e(sub->topic_+"_sub", "failed to deserialize");
     }
@@ -43,14 +43,14 @@ void SubscriberBaseImpl::TopicIpcMsgOwned::processSelf(SubscriberBaseImpl *sub) 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 SubscriberBaseImpl::SubscriberBaseImpl(std::string topic,
-        const std::shared_ptr<ThreadPool> &tp, const size_t queue_size,
-        IpcFunc ipc_cb,
-        ItcFunc itc_cb,
-        DeserFunc<> deserialize_f,
-        string protocol,
-        msg::MsgType msg_type)
+                                       const std::shared_ptr<ThreadPool> &tp, const size_t queue_size,
+                                       InterProcFunc inter_cb,
+                                       IntraProcFunc intra_cb,
+                                       DeserFunc<> deserialize_f,
+                                       string protocol,
+                                       msg::MsgType msg_type)
         : topic_(move(topic)), protocol_(move(protocol)), tp_(tp), queue_size_(queue_size),
-          ipc_callback_(move(ipc_cb)), itc_callback_(move(itc_cb)), deserialize_f_(move(deserialize_f)),
+          inter_proc_callback_(move(inter_cb)), intra_proc_callback_(move(intra_cb)), deserialize_f_(move(deserialize_f)),
           single_t_(tp->threads()==1){}
 
 SubscriberBaseImpl::~SubscriberBaseImpl() {

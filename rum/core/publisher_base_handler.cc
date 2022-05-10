@@ -4,7 +4,7 @@
 
 #include "publisher_base_handler.h"
 #include "internal/publisher_base_impl.h"
-#include "internal/itc_manager.h"
+#include "internal/intra_proc_manager.h"
 
 namespace rum {
 
@@ -21,11 +21,11 @@ const std::string &PublisherBaseHandler::getTopic() const {
 
 
 bool PublisherBaseHandler::pub(Message &body) {
-    return pimpl_->publishIpc(body);
+    return pimpl_->publish(body);
 }
 
-bool PublisherBaseHandler::scheduleItc(const std::shared_ptr<const void> &msg) {
-    return pimpl_->scheduleItc(msg);
+bool PublisherBaseHandler::scheduleIntraProc(const std::shared_ptr<const void> &msg) {
+    return pimpl_->scheduleIntraProc(msg);
 }
 
 }

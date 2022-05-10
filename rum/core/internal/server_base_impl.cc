@@ -9,9 +9,9 @@ using namespace std;
 
 namespace rum{
 
-ItcFunc ServerBaseImpl::genSubItc(const SrvItcFunc& srv_func) {
+IntraProcFunc ServerBaseImpl::genSubIntraProc(const SrvIntraProcFunc& srv_func) {
     return [srv_func](const shared_ptr<const void> &awaiting_result_void){
-        // const cast is ok as client build it in callItc without const
+        // const cast is ok as client build it in callIntraProc without const
         shared_ptr<AwaitingResult> awaiting_result =
                 const_pointer_cast<AwaitingResult>(
                     static_pointer_cast<const AwaitingResult>(awaiting_result_void)
@@ -28,16 +28,16 @@ ItcFunc ServerBaseImpl::genSubItc(const SrvItcFunc& srv_func) {
         }else{
             awaiting_result->status = SrvStatus::ServerErr;
         }
-        // for itc case we directly set and notify, skipped pub and sub
+        // for intra-proc case we directly set and notify, skipped pub and sub
         awaiting_result->cv.notify_one();
     };
 }
 
-IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
+InterProcFunc ServerBaseImpl::genSubInterProc(const SrvInterProcFunc &srv_func) {
     return [this, srv_func](const std::shared_ptr<const void> &request_void){
-        shared_ptr<SubscriberBaseImpl::SrvIpcRequest::Content> request =
-                const_pointer_cast<SubscriberBaseImpl::SrvIpcRequest::Content>(
-                        static_pointer_cast<const SubscriberBaseImpl::SrvIpcRequest::Content>(request_void)
+        shared_ptr<SubscriberBaseImpl::SrvIterProcRequest::Content> request =
+                const_pointer_cast<SubscriberBaseImpl::SrvIterProcRequest::Content>(
+                        static_pointer_cast<const SubscriberBaseImpl::SrvIterProcRequest::Content>(request_void)
                 );
 
         // handle ping
@@ -70,10 +70,10 @@ IpcFunc ServerBaseImpl::genSubIpc(const SrvIpcFunc &srv_func) {
             return;
         }
         if (ok){
-            itr->second->publishRepIpc(request->id, 0, *rep_message);
+            itr->second->publishRep(request->id, 0, *rep_message);
         } else{
             Message empty_rep{0};
-            itr->second->publishRepIpc(request->id, 1, empty_rep);
+            itr->second->publishRep(request->id, 1, empty_rep);
         }
     };
 }

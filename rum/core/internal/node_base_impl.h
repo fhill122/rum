@@ -11,7 +11,7 @@
 #include "server_base_impl.h"
 #include "master.h"
 #include "remote_manager.h"
-#include "itc_manager.h"
+#include "intra_proc_manager.h"
 #include "rum/common/node_param.h"
 #include "rum/extern/ivtb/scheduler.h"
 #include "rum/core/msg/rum_sync_generated.h"
@@ -26,7 +26,7 @@ class NodeBaseImpl {
     const std::string name_;
     const int nid_;
 
-    std::shared_ptr<ItcManager> itc_manager_ = ItcManager::GlobalManager();
+    std::shared_ptr<InatraProcManager> intra_proc_manager_ = InatraProcManager::GlobalManager();
     std::shared_ptr<RemoteManager> remote_manager_ = RemoteManager::GlobalManager();
     std::unique_ptr<SubContainer> sub_container_;
     std::unique_ptr<SubContainer> syncsub_container_;
@@ -70,8 +70,8 @@ class NodeBaseImpl {
     SubscriberBaseImpl*
     addSubscriber(const std::string &topic,
                   const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
-                  const IpcFunc &ipc_cb,
-                  const ItcFunc &itc_cb,
+                  const InterProcFunc &inter_cb,
+                  const IntraProcFunc &intra_cb,
                   const DeserFunc<> &deserialize_f,
                   const std::string &protocol = ""); RUM_THREAD_SAFE
 
@@ -88,8 +88,8 @@ class NodeBaseImpl {
 
     ServerBaseImpl* addServer(const std::string &srv_name,
                               const std::shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
-                              const SrvIpcFunc &ipc_func,
-                              const SrvItcFunc &itc_func,
+                              const SrvInterProcFunc &inter_f,
+                              const SrvIntraProcFunc &intra_f,
                               const std::string &sub_protocol = "",
                               const std::string &pub_protocol = "");  RUM_THREAD_SAFE
 

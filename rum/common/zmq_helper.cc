@@ -129,7 +129,7 @@ string GenIpcAddr() {
     return "ipc:///tmp/rum_ipc_" + to_string(kPid) + "_" + to_string(idPool++);
 }
 
-string GenItcAddr() {
+string GenIntraProcAddr() {
     static atomic_uint64_t idPool{0};
     return "inproc://rum_" + to_string(kPid) + "_" + to_string(idPool++);
 }
@@ -219,7 +219,7 @@ void ZmqSyncedOp(zmq::socket_t &socket, ZmqOpType op, const string &addr) {
 }
 
 ZmqMonitor::ZmqMonitor(zmq::socket_t &socket, int events) {
-    auto addr = GenItcAddr();
+    auto addr = GenIntraProcAddr();
     int rc = zmq_socket_monitor(socket.handle(), addr.c_str(), events);
     if (rc != 0)
         throw zmq::error_t();

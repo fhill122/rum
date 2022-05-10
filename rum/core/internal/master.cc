@@ -143,7 +143,7 @@ Master::~Master() {
 
 void Master::syncForward(zmq::message_t& msg) {
     log.v(TAG, "forwarded a sync msg:\n\t%s", ToString(msg::GetSyncBroadcast(msg.data())).c_str());
-    pub_->publishIpc(msg);
+    pub_->publish(msg);
 }
 
 }

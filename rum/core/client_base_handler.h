@@ -55,13 +55,13 @@ class ClientBaseHandler {
 
     bool isConnected() const;
 
-    CallHandler sendItc(const std::shared_ptr<const void> &request);
-    Result<void> waitItc(CallHandler &&call_handler, unsigned int timeout_ms = 0);
-    Result<void> callItc(const std::shared_ptr<const void> &request, unsigned int timeout_ms = 0);
+    CallHandler sendIntraProc(const std::shared_ptr<const void> &request);
+    Result<void> waitIntraProc(CallHandler &&call_handler, unsigned int timeout_ms = 0);
+    Result<void> callIntraProc(const std::shared_ptr<const void> &request, unsigned int timeout_ms = 0);
 
-    CallHandler sendIpc(std::unique_ptr<Message> request);
-    Result<MessageWithProto> waitIpc(CallHandler &&call_handler, unsigned int timeout_ms = 0);
-    Result<MessageWithProto> callIpc(std::unique_ptr<Message> request, unsigned int timeout_ms = 0);
+    CallHandler sendInterProc(std::unique_ptr<Message> request);
+    Result<MessageWithProto> waitInterProc(CallHandler &&call_handler, unsigned int timeout_ms = 0);
+    Result<MessageWithProto> callIterProc(std::unique_ptr<Message> request, unsigned int timeout_ms = 0);
 
     /**
      * Ping to check server connectivity

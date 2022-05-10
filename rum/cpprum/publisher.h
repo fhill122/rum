@@ -25,10 +25,10 @@ class Publisher : public PublisherBaseHandler{
 
   private:
     void internalPub(const std::shared_ptr<const MsgT> &msg){
-        // pub itc
-        bool scheduled = scheduleItc(msg);
+        // pub intra-proc
+        bool scheduled = scheduleIntraProc(msg);
 
-        // pub ipc
+        // pub inter-proc
         if (isConnected()){
             auto message = ser_func_(msg);
             if(message){

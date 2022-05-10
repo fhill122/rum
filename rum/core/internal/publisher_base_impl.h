@@ -55,26 +55,27 @@ class PublisherBaseImpl {
     inline std::mutex& getPubMutex(){return zmq_mu_;}
     bool isConnected();
 
-    // topic
-    bool publishIpc(zmq::message_t &header, zmq::message_t &body);
-    bool publishIpc(zmq::message_t &body);
-    bool publishIpc(zmq::message_t &&body){ return publishIpc(body);}
+    // topic. inter-proc send
+    bool publish(zmq::message_t &header, zmq::message_t &body);
+    bool publish(zmq::message_t &body);
+    bool publish(zmq::message_t &&body){ return publish(body);}
 
     // srv
-    bool publishReqIpc(unsigned int id, zmq::message_t &body, const char* protocol=nullptr);
+    bool publishReq(unsigned int id, zmq::message_t &body, const char* protocol= nullptr);
     bool publishPingReq(unsigned int id){
         zmq::message_t msg{0};
-        return publishReqIpc(id, msg, kPingProtocol);
+        return publishReq(id, msg, kPingProtocol);
     }
 
-    bool publishRepIpc(unsigned int id, char status, zmq::message_t &body, const char* protocol=nullptr);
+    bool publishRep(unsigned int id, char status, zmq::message_t &body, const char* protocol= nullptr);
     bool publishPingRep(unsigned int id){
         zmq::message_t msg{0};
-        return publishRepIpc(id, 0, msg, kPingProtocol);
+        return publishRep(id, 0, msg, kPingProtocol);
     }
 
-    bool scheduleItc(const std::shared_ptr<const void> &msg);
-    bool connectedItc();
+    // intra-proc send
+    bool scheduleIntraProc(const std::shared_ptr<const void> &msg);
+    bool connectedIntraProc();
 
     static int send(zmq::socket_t &socket, zmq::message_t &message, bool wait);
 

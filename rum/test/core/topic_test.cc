@@ -10,7 +10,7 @@
 #include <rum/common/log.h>
 #include <rum/core/internal/node_base_impl.h>
 #include <rum/common/common.h>
-#include <rum/core/internal/itc_manager.h>
+#include <rum/core/internal/intra_proc_manager.h>
 #include <rum/extern/ivtb/stopwatch.h>
 
 #include "../test_utils/process_utils.h"
@@ -30,7 +30,7 @@ class ImplTest : public ::testing::Test{
     PublisherBaseImpl *pub_ = nullptr;
     SubscriberBaseImpl *sub_ = nullptr;
     atomic_int ipc_count{0};
-    atomic_int itc_count{0};
+    atomic_int itra_proc_count{0};
 
   private:
 
@@ -44,12 +44,12 @@ class ImplTest : public ::testing::Test{
         pub_ = node_->addPublisher(kTopic, kProtocol);
         sub_ = node_->addSubscriber(kTopic, make_shared<ivtb::ThreadPool>(1), 100,
                              [&](const shared_ptr<const void> &){ipc_count.fetch_add(1,memory_order_relaxed);},
-                             [&](const shared_ptr<const void> &){itc_count.fetch_add(1,memory_order_relaxed);},
+                             [&](const shared_ptr<const void> &){itra_proc_count.fetch_add(1, memory_order_relaxed);},
                              [](shared_ptr<const Message> &msg, const string&){return move(msg);}, kProtocol);
     }
 
     virtual ~ImplTest() {
-        // this is mandatory as ItcManager is global and contains all the history subs
+        // this is mandatory as IntraProcManager is global and contains all the history subs
         if (node_) node_->shutdown();
         this_thread::sleep_for(10ms);
     }
@@ -65,7 +65,7 @@ class ImplMultiTest : public ::testing::Test{
     vector<vector<SubscriberBaseImpl*>> subs_;
     shared_ptr<ivtb::ThreadPool> tp = make_shared<ivtb::ThreadPool>(2);
     atomic_int shared_ipc_count{0};
-    atomic_int shared_itc_count{0};
+    atomic_int shared_intra_proc_count{0};
 
     void init(int n_topics, int n_subs, int n_pubs,
               NodeParam param = NodeParam()){
@@ -86,31 +86,31 @@ class ImplMultiTest : public ::testing::Test{
             for(int j=0; j<n_subs; ++j){
                 subs_[i][j] = node_->addSubscriber(topic, tp, 1000,
                         [&](const shared_ptr<const void> &){shared_ipc_count.fetch_add(1, memory_order_relaxed);},
-                        [&](const shared_ptr<const void> &){shared_itc_count.fetch_add(1, memory_order_relaxed);},
+                        [&](const shared_ptr<const void> &){shared_intra_proc_count.fetch_add(1, memory_order_relaxed);},
                         [](shared_ptr<const Message> &msg, const string&){return move(msg);}, kProtocol);
             }
         }
     }
 
     virtual ~ImplMultiTest() {
-        // this is mandatory as ItcManager is global and contains all the history subs
+        // this is mandatory as IntraProcManager is global and contains all the history subs
         if (node_) node_->shutdown();
         this_thread::sleep_for(10ms);
     }
 
 };
 
-TEST_F(ImplTest, ItcBasic){
+TEST_F(ImplTest, IntraProcBasic){
     init();
 
     for (int i = 0; i < 10; ++i) {
-        pub_->publishIpc(zmq::message_t(1));
+        pub_->publish(zmq::message_t(1));
         auto str_ptr = make_shared<string>("fdd");
-        pub_->scheduleItc(str_ptr);
+        pub_->scheduleIntraProc(str_ptr);
     }
 
     this_thread::sleep_for(50ms);
-    EXPECT_EQ(itc_count.load(), 10);
+    EXPECT_EQ(itra_proc_count.load(), 10);
     EXPECT_EQ(ipc_count.load(), 0);
 }
 
@@ -119,7 +119,7 @@ TEST_F(ImplTest, IpcBasic) {
 
     string cmd = argv0 + "_companion " + "IpcBasic_both";
     system(cmd.c_str());
-    EXPECT_EQ(itc_count.load(), 0);
+    EXPECT_EQ(itra_proc_count.load(), 0);
     EXPECT_EQ(ipc_count.load(), 10);
 }
 
@@ -128,7 +128,7 @@ TEST_F(ImplTest, TcpBasic) {
 
     string cmd = argv0 + "_companion " + "IpcBasic_tcp";
     system(cmd.c_str());
-    EXPECT_EQ(itc_count.load(), 0);
+    EXPECT_EQ(itra_proc_count.load(), 0);
     EXPECT_EQ(ipc_count.load(), 10);
 }
 
@@ -139,7 +139,7 @@ TEST_F(ImplTest, TcpIcpMismatched) {
 
     string cmd = argv0 + "_companion " + "IpcBasic_ipc";
     system(cmd.c_str());
-    EXPECT_EQ(itc_count.load(), 0);
+    EXPECT_EQ(itra_proc_count.load(), 0);
     EXPECT_EQ(ipc_count.load(), 0);
 }
 
@@ -153,15 +153,15 @@ TEST_F(ImplTest, ItcIpcTcpBasic) {
 
     int itc_n = kNodeHbPeriod+150;
     for (int i = 0; i < itc_n; ++i) {
-        pub_->publishIpc(zmq::message_t(1));
+        pub_->publish(zmq::message_t(1));
         auto str_ptr = make_shared<string>("fdd");
-        pub_->scheduleItc(str_ptr);
+        pub_->scheduleIntraProc(str_ptr);
         this_thread::sleep_for(1ms);
     }
 
     t1.join();
     t2.join();
-    EXPECT_EQ(itc_count.load(), itc_n);
+    EXPECT_EQ(itra_proc_count.load(), itc_n);
     EXPECT_EQ(ipc_count.load(), 20);
 }
 
@@ -213,7 +213,8 @@ TEST_F(ImplTest, RemoteSubRemoval){
 }
 
 // when launch all test, got err: Resource temporarily unavailable
-// just easy to fail when run all, but pass when run single test or on 127.0.0.1 or sleep long enough
+// todo ivan.
+//  just easy to fail when run all, but pass when run single test or on 127.0.0.1 or sleep long enough
 TEST_F(ImplMultiTest, MultiItcIpcTcp){
     constexpr int kNTopics = 10;
     constexpr int kNSubs = 5;
@@ -231,7 +232,7 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
         for (int j=0; j<kNTopics; ++j) {
             for (int k=0; k<kNPubs; ++k){
                 auto str_ptr = make_shared<string>("fdd");
-                pubs_[j][k]->scheduleItc(str_ptr);
+                pubs_[j][k]->scheduleIntraProc(str_ptr);
             }
         }
         this_thread::sleep_for(1ms);
@@ -240,7 +241,7 @@ TEST_F(ImplMultiTest, MultiItcIpcTcp){
     t1.join();
     t2.join();
     this_thread::sleep_for(10ms);
-    EXPECT_EQ(shared_itc_count.load(), itc_n*kNSubs*kNTopics*kNPubs);
+    EXPECT_EQ(shared_intra_proc_count.load(), itc_n*kNSubs*kNTopics*kNPubs);
     EXPECT_EQ(shared_ipc_count.load(), 100*2*kNSubs*kNTopics*kNPubs);
 }
 
@@ -281,7 +282,7 @@ TEST_F(LongSubTask, SingleTp){
     initSubs(1);
 
     for (int i = 0; i < 10; ++i) {
-        pub->scheduleItc(make_shared<string>("fdd"));
+        pub->scheduleIntraProc(make_shared<string>("fdd"));
     }
     this_thread::sleep_for(1ms);
 
@@ -293,7 +294,7 @@ TEST_F(LongSubTask, SharedTp){
     initSubs(2);
 
     for (int i = 0; i < 10; ++i) {
-        pub->scheduleItc(make_shared<string>("fdd"));
+        pub->scheduleIntraProc(make_shared<string>("fdd"));
     }
     this_thread::sleep_for(1ms);
 

@@ -15,7 +15,7 @@ sudo lsof -i :10086
 Major:
 - no master
 - free serialization choices
-- auto choose the best transportation among itc, ipc or tcp
+- auto choose the best transportation among intra-process, ipc or tcp
 - few dependencies (only libzmq is mandatory)
 
 Misc:
@@ -26,11 +26,8 @@ Misc:
 Why so harsh on ros? Coz I'm mean...
 
 ## todo
-- there is only 1 server, but could exist multiple client, how to use pub/sub to deal with this?  
-  multiple pub in server, each connect to a single client's subcontainer. we need ping to wait until connection established
 - serialization should be in cpprum?
-- rename ipc itc to intrap and interp
 - moodycamel queue with token
-- udp discovery:
+- try udp discovery:
   https://zguide.zeromq.org/docs/chapter8/#Cooperative-Discovery-Using-UDP-Broadcasts
   https://github.com/computersarecool/cpp_sockets

@@ -60,10 +60,10 @@ bool SubContainer::connectRaw(const std::string &addr){
 bool SubContainer::start() {
     // setup internal interrupter
     zmq_interrupter_ = make_unique<zmq::socket_t>(*context_, ZMQ_PUB);
-    auto itc_addr = GenItcAddr();
+    auto intra_proc_addr = GenIntraProcAddr();
     try{
-        zmq_interrupter_->bind(itc_addr);
-        zmq_subscriber_->connect(itc_addr);
+        zmq_interrupter_->bind(intra_proc_addr);
+        zmq_subscriber_->connect(intra_proc_addr);
     }
     catch (...){
         log.e(TAG, "failed to setup interrupter");
@@ -146,11 +146,11 @@ bool SubContainer::loop() {
         }
         shared_ptr<SubscriberBaseImpl::SubMsg> sub_msg;
         if (itr->second.size()==1){
-            sub_msg = make_shared<SubscriberBaseImpl::TopicIpcMsgOwned>(
+            sub_msg = make_shared<SubscriberBaseImpl::TopicInterProcMsgOwned>(
                     move(body), header_fb->protocal()->str() );
             // well, sub_msg could be moved here to enqueue
         }else{
-            sub_msg = make_shared<SubscriberBaseImpl::TopicIpcMsg>(
+            sub_msg = make_shared<SubscriberBaseImpl::TopicInterProcMsg>(
                     move(body), header_fb->protocal()->str() );
         }
         for (auto &sub : itr->second){
@@ -171,8 +171,8 @@ bool SubContainer::loop() {
         }
         AssertLog(header_fb->extra_type()==msg::ExtraInfo_ReqInfo, "");
         auto *req_info = header_fb->extra_as_ReqInfo();
-        auto sub_msg = make_shared<SubscriberBaseImpl::SrvIpcRequest>(move(body), header_fb->protocal()->str(),
-                                                                      req_info->id(), req_info->client_id()->str());
+        auto sub_msg = make_shared<SubscriberBaseImpl::SrvIterProcRequest>(move(body), header_fb->protocal()->str(),
+                                                                           req_info->id(), req_info->client_id()->str());
         AssertLog(itr->second.size()==1, "multiple local services");
         // todo ivan. could use enqueue token
         itr->second[0]->enqueue(sub_msg);

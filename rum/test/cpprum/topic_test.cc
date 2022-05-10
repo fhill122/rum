@@ -65,7 +65,7 @@ struct SimpleFbNode : public ::testing::Test{
     }
 };
 
-TEST_F(SimpleFbNode, ItcTest){
+TEST_F(SimpleFbNode, IntraProcTest){
     init();
 
     constexpr int kNum = 10;
@@ -141,7 +141,7 @@ struct SimpleNativeNode : public ::testing::Test{
     }
 };
 
-TEST_F(SimpleNativeNode, ItcTest){
+TEST_F(SimpleNativeNode, IntraProcTest){
     init();
 
     constexpr int kNum = 10;

@@ -31,15 +31,15 @@ class Client : public ClientBaseHandler{
   private:
     SerFunc<ReqT> ser_func_;
     DeserFunc<RepT> ipc_factory_func_;  // deserialize and type convert
-    ItcFactoryFunc<RepT> itc_factory_func_;
+    IntraProcFactoryFunc<RepT> intra_proc_factory_func_;
 
   public:
     // test constructor
     Client() : ClientBaseHandler(nullptr){};
     Client(ClientBaseHandler &&base, SerFunc<ReqT> ser_func, DeserFunc<RepT> ipc_factory_func,
-           ItcFactoryFunc<RepT> itc_factory_func) :
-           ClientBaseHandler(std::move(base)), ser_func_(std::move(ser_func)),
-           ipc_factory_func_(std::move(ipc_factory_func)), itc_factory_func_(std::move(itc_factory_func)){}
+           IntraProcFactoryFunc<RepT> intra_proc_factory_func) :
+            ClientBaseHandler(std::move(base)), ser_func_(std::move(ser_func)),
+            ipc_factory_func_(std::move(ipc_factory_func)), intra_proc_factory_func_(std::move(intra_proc_factory_func)){}
 
     ~Client() override{
         NodeBase::GlobalNode()->removeClient(*this);
@@ -73,18 +73,18 @@ Result<RepT> Client<ReqT, RepT>::callForeground(std::unique_ptr<ReqT> request, u
     shared_ptr<ReqT> request_sptr = move(request);
 
     // call intrap
-    auto itc_result = callItc(request_sptr, timeout_ms);
-    if (itc_result.status!=SrvStatus::NoConnections){
-        result.status = itc_result.status;
-        result.response = result.status==SrvStatus::OK?
-                          const_pointer_cast<RepT>(itc_factory_func_(itc_result.response)) : nullptr;
+    auto intra_proc_result = callIntraProc(request_sptr, timeout_ms);
+    if (intra_proc_result.status!=SrvStatus::NoConnections){
+        result.status = intra_proc_result.status;
+        result.response = result.status==SrvStatus::OK ?
+                          const_pointer_cast<RepT>(intra_proc_factory_func_(intra_proc_result.response)) : nullptr;
         return result;
     }
 
     // call interp
     if (isConnected()){
         auto request_msg = ser_func_(request_sptr);
-        auto ipc_result = callIpc(move(request_msg), timeout_ms);
+        auto ipc_result = callIterProc(move(request_msg), timeout_ms);
         result.status = ipc_result.status;
         if (result.status ==  SrvStatus::OK){
             auto response_msg = const_pointer_cast<const Message>(ipc_result.response->first);
@@ -106,14 +106,14 @@ FutureResult<RepT> Client<ReqT, RepT>::call(std::unique_ptr<ReqT> request, unsig
     shared_ptr<ReqT> request_sptr = move(request);
 
     // intrap case
-    result.call_handler = sendItc(request_sptr);
+    result.call_handler = sendIntraProc(request_sptr);
     if (result.call_handler.getCurrentStatus()!=SrvStatus::NoConnections){
         result.future =  std::async(std::launch::async,
             [call_handler = result.call_handler, timeout_ms, this]() mutable -> Result<RepT>{
-                auto itc_result = waitItc(move(call_handler), timeout_ms);
-                return {itc_result.status,
-                        itc_result.status == SrvStatus::OK?
-                        const_pointer_cast<RepT>(itc_factory_func_(itc_result.response)) : nullptr};
+                auto intra_proc_result = waitIntraProc(move(call_handler), timeout_ms);
+                return {intra_proc_result.status,
+                        intra_proc_result.status == SrvStatus::OK ?
+                        const_pointer_cast<RepT>(intra_proc_factory_func_(intra_proc_result.response)) : nullptr};
             });
         AssertLog(result.future.valid(), "");
         return result;
@@ -121,10 +121,10 @@ FutureResult<RepT> Client<ReqT, RepT>::call(std::unique_ptr<ReqT> request, unsig
 
     // interp case
     if (isConnected()){
-        result.call_handler = sendIpc(ser_func_(request_sptr));
+        result.call_handler = sendInterProc(ser_func_(request_sptr));
         result.future = std::async(std::launch::async,
             [call_handler = result.call_handler, timeout_ms, this]() mutable -> Result<RepT>{
-                auto ipc_result = waitIpc(move(call_handler), timeout_ms);
+                auto ipc_result = waitInterProc(move(call_handler), timeout_ms);
                 if (ipc_result.status == SrvStatus::OK){
                     auto response_msg = const_pointer_cast<const Message>(ipc_result.response->first);
                     return {ipc_result.status,

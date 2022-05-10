@@ -28,36 +28,36 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
         virtual void processSelf(SubscriberBaseImpl* sub) = 0;
     };
 
-    struct TopicItcMsg : public SubMsg{
+    struct TopicIntraProcMsg : public SubMsg{
         const std::shared_ptr<const void> msg;
 
-        explicit TopicItcMsg(std::shared_ptr<const void> msg) : msg(std::move(msg)) {}
-        void processSelf(SubscriberBaseImpl* sub) override {sub->itc_callback_(msg);}
+        explicit TopicIntraProcMsg(std::shared_ptr<const void> msg) : msg(std::move(msg)) {}
+        void processSelf(SubscriberBaseImpl* sub) override {sub->intra_proc_callback_(msg);}
     };
 
-    struct TopicIpcMsg : public SubMsg{
+    struct TopicInterProcMsg : public SubMsg{
         std::shared_ptr<const Message> msg;
         const std::string protocol;
         std::mutex deserialize_mu;
         std::shared_ptr<const void> deserialized_obj = nullptr;
 
-        TopicIpcMsg(std::shared_ptr<const Message> &&msg, std::string &&protocol)
+        TopicInterProcMsg(std::shared_ptr<const Message> &&msg, std::string &&protocol)
                 : msg(std::move(msg)), protocol(std::move(protocol)) {}
         void processSelf(SubscriberBaseImpl *sub) override;
     };
 
-    struct TopicIpcMsgOwned : public SubMsg{
+    struct TopicInterProcMsgOwned : public SubMsg{
         std::shared_ptr<const Message> msg;
         const std::string protocol;
 
-        TopicIpcMsgOwned(std::shared_ptr<const Message> &&msg, std::string &&protocol)
+        TopicInterProcMsgOwned(std::shared_ptr<const Message> &&msg, std::string &&protocol)
                 : msg(std::move(msg)), protocol(std::move(protocol)) {}
         void processSelf(SubscriberBaseImpl *sub) override;
     };
 
-    using SrvItcRequest = TopicItcMsg;
+    using SrvIntraProcRequest = TopicIntraProcMsg;
 
-    struct SrvIpcRequest : public SubMsg{
+    struct SrvIterProcRequest : public SubMsg{
         struct Content{
             std::shared_ptr<Message> request = nullptr;
             std::string protocol;
@@ -70,14 +70,14 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
 
         std::shared_ptr<const Content> msg;
 
-        SrvIpcRequest(const std::shared_ptr<Message> &request,
-                      const std::string &protocol,
-                      unsigned int id,
-                      const std::string &pub_topic)
+        SrvIterProcRequest(const std::shared_ptr<Message> &request,
+                           const std::string &protocol,
+                           unsigned int id,
+                           const std::string &pub_topic)
                 : msg(std::make_shared<Content>(request, protocol, id, pub_topic)){}
         void processSelf(SubscriberBaseImpl *sub) override {
             // AssertLog(sub->msg_type_==msg::MsgType_ServiceRequest, "");
-            sub->ipc_callback_(msg);
+            sub->inter_proc_callback_(msg);
         }
     };
 
@@ -91,8 +91,8 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
 #endif
     const size_t queue_size_; // <=0 to indicate infinite
 
-    IpcFunc ipc_callback_;
-    ItcFunc itc_callback_;
+    InterProcFunc inter_proc_callback_;
+    IntraProcFunc intra_proc_callback_;
     DeserFunc<> deserialize_f_;
     const bool single_t_;
 
@@ -110,12 +110,12 @@ class SubscriberBaseImpl : public std::enable_shared_from_this<SubscriberBaseImp
      * @param topic Topic
      * @param tp Thread pool
      * @param queue_size Size of message queue
-     * @param ipc_cb Ipc callback function, note that we allow to modify the message here
-     * @param itc_cb Itc callback function
+     * @param inter_cb Inter-proc callback function, note that we allow to modify the message here
+     * @param intra_cb Intra-proc callback function
      */
     SubscriberBaseImpl(std::string topic, const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
-                       IpcFunc ipc_cb,
-                       ItcFunc itc_cb,
+                       InterProcFunc inter_cb,
+                       IntraProcFunc intra_cb,
                        DeserFunc<> deserialize_f,
                        std::string protocol = "",
                        msg::MsgType msg_type = msg::MsgType::MsgType_Message);

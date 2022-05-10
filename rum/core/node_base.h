@@ -38,8 +38,8 @@ class NodeBase {
 
     SubscriberBaseHandler addSubscriber(const std::string &topic,
         const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
-        const IpcFunc &ipc_cb,
-        const ItcFunc &itc_cb,
+        const InterProcFunc &inter_cb,
+        const IntraProcFunc &intra_cb,
         const DeserFunc<> &deserialize_f,
         const std::string &protocol);
 
@@ -55,8 +55,8 @@ class NodeBase {
 
     ServerBaseHandler addServer(const std::string &srv_name,
                                 const std::shared_ptr<ThreadPool> &tp, size_t queue_size,
-                                const SrvIpcFunc &ipc_func,
-                                const SrvItcFunc &itc_func,
+                                const SrvInterProcFunc &inter_f,
+                                const SrvIntraProcFunc &intra_f,
                                 const std::string &req_protocol,
                                 const std::string &rep_protocol);
 

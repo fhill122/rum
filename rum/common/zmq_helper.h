@@ -47,7 +47,7 @@ std::string GenTcpAddr();
 
 std::string GenIpcAddr();
 
-std::string GenItcAddr();
+std::string GenIntraProcAddr();
 
 std::string BindRandTcp(zmq::socket_t &socket, int trial = 100);
 

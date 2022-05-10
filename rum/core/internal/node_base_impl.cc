@@ -155,7 +155,7 @@ void NodeBaseImpl::syncFunc(){
     Message fb_msg{sync_fb_builder_->GetBufferPointer(), sync_fb_builder_->GetSize(),
                    [](void*, void* builder_sptr){ delete (shared_ptr<FlatBufferBuilder>*)builder_sptr;},
                    builder_count_keep};
-    sync_pub_->publishIpc(fb_msg);
+    sync_pub_->publish(fb_msg);
     log.d(__func__, "broadcast sync once: %s",
           ToString(msg::GetSyncBroadcast(sync_fb_builder_->GetBufferPointer())).c_str());
 }
@@ -194,12 +194,12 @@ bool NodeBaseImpl::shouldConnectTcp(const msg::NodeId *sync) const {
 
 SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
                             const shared_ptr<ivtb::ThreadPool> &tp, size_t queue_size,
-                            const IpcFunc &ipc_cb,
-                            const ItcFunc &itc_cb,
+                            const InterProcFunc &inter_cb,
+                            const IntraProcFunc &intra_cb,
                             const DeserFunc<> &deserialize_f,
                             const string &protocol) {
     auto sub = make_unique<SubscriberBaseImpl>(
-            topic, tp, queue_size, ipc_cb, itc_cb, deserialize_f, protocol);
+            topic, tp, queue_size, inter_cb, intra_cb, deserialize_f, protocol);
     auto *sub_raw = sub.get();
     bool new_topic = sub_container_->addSub(move(sub));
     if (new_topic){
@@ -207,14 +207,14 @@ SubscriberBaseImpl* NodeBaseImpl::addSubscriber(const string &topic,
         sync_task_ = make_shared<Scheduler::Task>(*sync_task_);
         sync_scheduler_.schedule(sync_task_);
     }
-    itc_manager_->addSub(sub_raw);
+    intra_proc_manager_->addSub(sub_raw);
     return sub_raw;
 }
 
 void NodeBaseImpl::removeSubscriber(SubscriberBaseImpl* &sub){
     AssertLog(sub, "");
-    // remove pointer from itc first
-    itc_manager_->removeSub(sub);
+    // remove pointer from intra-proc first
+    intra_proc_manager_->removeSub(sub);
     // remove sub from container
     bool topic_removed = sub_container_->removeSub(sub);
     if (topic_removed){
@@ -276,7 +276,7 @@ ClientBaseImpl *NodeBaseImpl::addClient(const string &srv_name, const string &pu
     auto cli_id = GetRepTopic(srv_name, node_str);
     auto *pub = addPublisher(GetReqTopic(srv_name), pub_protocol, msg::MsgType_ServiceRequest);
     pub->set_cli_id(cli_id);
-    // itc or ipc will never be called
+    // neither intra-proc nor inter-proc will ever be called
     auto *sub = addSubscriber(cli_id, ClientBaseImpl::sub_dumb_tp_, 0,
                               nullptr, nullptr, nullptr);
     return new ClientBaseImpl(pub, sub);
@@ -293,11 +293,10 @@ void NodeBaseImpl::removeClient(ClientBaseImpl *&client) {
 ServerBaseImpl *NodeBaseImpl::addServer(const string &srv_name,
                                         const shared_ptr<ivtb::ThreadPool> &tp,
                                         size_t queue_size,
-                                        const SrvIpcFunc &ipc_func,
-                                        const SrvItcFunc &itc_func,
+                                        const SrvInterProcFunc &inter_f,
+                                        const SrvIntraProcFunc &intra_f,
                                         const string &sub_protocol,
                                         const string &pub_protocol) {
-    // todo ivan. doing here
     auto server = make_unique<ServerBaseImpl>(pub_protocol);
     auto *server_raw = server.get();
 
@@ -330,8 +329,8 @@ ServerBaseImpl *NodeBaseImpl::addServer(const string &srv_name,
     }
 
     auto *sub = addSubscriber(GetReqTopic(srv_name), tp, queue_size,
-                              server_raw->genSubIpc(ipc_func),
-                              server_raw->genSubItc(itc_func),
+                              server_raw->genSubInterProc(inter_f),
+                              server_raw->genSubIntraProc(intra_f),
                               nullptr, sub_protocol);
     server_raw->setSub(sub);
 
@@ -369,7 +368,7 @@ void NodeBaseImpl::shutdown() {
 
     // subs
     auto subs = sub_container_->getSubs();
-    itc_manager_->batchRemove(subs);
+    intra_proc_manager_->batchRemove(subs);
     sub_container_->clearSubs();
 
     is_down_.store(true, memory_order_release);

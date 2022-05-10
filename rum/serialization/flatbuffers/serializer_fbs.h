@@ -43,7 +43,7 @@ class SerializerFbs : public Serializer<SerializerFbs> {
 
     // always subscribe with Message, as this is the only way to copy flatbuffers objects
     template<typename SubT = Message>
-    std::shared_ptr<const SubT> itcTypeConvert(const std::shared_ptr<const void>& msg) const{
+    std::shared_ptr<const SubT> intraProcTypeConvert(const std::shared_ptr<const void>& msg) const{
         AssertLog(msg, "");
         auto *builder_cpy = new std::shared_ptr<const FbsBuilder>(
                 std::static_pointer_cast<const FbsBuilder>(msg) );

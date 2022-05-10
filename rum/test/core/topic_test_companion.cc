@@ -48,7 +48,7 @@ class ImplMultiTest{
     unique_ptr<NodeBaseImpl> node_;
     vector<vector<PublisherBaseImpl*>> pubs_;
     atomic_int shared_ipc_count{0};
-    atomic_int shared_itc_count{0};
+    atomic_int shared_intra_proc_count{0};
 
     void init(int n_topics, int n_pubs,
               NodeParam param = NodeParam()){
@@ -74,7 +74,7 @@ void IpcBasic_both(){
     ImplTest impl_test;
     impl_test.init();
     for (int i = 0; i < 10; ++i) {
-        impl_test.pub_->publishIpc(zmq::message_t(1));
+        impl_test.pub_->publish(zmq::message_t(1));
     }
     this_thread::sleep_for(10ms);
     Log::I(__func__, "end");
@@ -87,7 +87,7 @@ void IpcBasic_ipc(){
     param.enable_tcp_tx = false;
     impl_test.init(param);
     for (int i = 0; i < 10; ++i) {
-        impl_test.pub_->publishIpc(zmq::message_t(1));
+        impl_test.pub_->publish(zmq::message_t(1));
     }
     this_thread::sleep_for(10ms);
     Log::I(__func__, "end");
@@ -100,7 +100,7 @@ void IpcBasic_tcp(){
     param.enable_ipc_txrx = false;
     impl_test.init(param);
     for (int i = 0; i < 10; ++i) {
-        impl_test.pub_->publishIpc(zmq::message_t(1));
+        impl_test.pub_->publish(zmq::message_t(1));
     }
     this_thread::sleep_for(10ms);
     Log::I(__func__, "end");
@@ -139,7 +139,7 @@ void MultiIpc(){
     for (int i=0; i<100; ++i){
         for (int j=0; j<kNTopics; ++j) {
             for (int k=0; k<kNPubs; ++k)
-                test.pubs_[j][k]->publishIpc(zmq::message_t(1));
+                test.pubs_[j][k]->publish(zmq::message_t(1));
         }
         this_thread::sleep_for(1ms);
     }
@@ -159,7 +159,7 @@ void MultiTcp(){
     for (int i=0; i<100; ++i){
         for (int j=0; j<kNTopics; ++j) {
             for (int k=0; k<kNPubs; ++k)
-                test.pubs_[j][k]->publishIpc(zmq::message_t(1));
+                test.pubs_[j][k]->publish(zmq::message_t(1));
         }
         this_thread::sleep_for(1ms);
     }

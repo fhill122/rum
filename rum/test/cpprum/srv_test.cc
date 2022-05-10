@@ -111,6 +111,7 @@ TEST_F(SimpleFbNode, BasicInterP){
     basicInterP(CreateReqeust(1,1,0), CompanionCmd::BasicInterP, false, SrvStatus::ServerErr);
 }
 
+// multi threads client call and server processing. only intra process tested here
 TEST_F(SimpleFbNode, MultiThreads){
     constexpr int kNumThreads = 4;
     constexpr int kSleepMs = 10;
@@ -364,7 +365,6 @@ TEST_F(SimpleFbNode, Overflow) {
 
 //todo ivan.
 // different serializer for req and rep
-// threadpool
 
 
 int main(int argc, char **argv){

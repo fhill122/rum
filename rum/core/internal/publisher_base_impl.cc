@@ -7,7 +7,7 @@
 #include <rum/common/common.h>
 #include <rum/common/log.h>
 #include <rum/common/zmq_helper.h>
-#include "itc_manager.h"
+#include "intra_proc_manager.h"
 
 #define TAG (topic_+"_pub")
 
@@ -94,23 +94,23 @@ bool PublisherBaseImpl::isConnected() {
     return !conn_list_.empty();
 }
 
-bool PublisherBaseImpl::publishIpc(zmq::message_t &header, zmq::message_t &body) {
+bool PublisherBaseImpl::publish(zmq::message_t &header, zmq::message_t &body) {
     lock_guard<mutex> lock(zmq_mu_);
     if (send(*zmq_publisher_, header, true) == 0){
         if (send(*zmq_publisher_, body, false) == 0)
             return true;
     }
-    AssertLog(false, "Failed to publishIpc");
+    AssertLog(false, "Failed to publish");
     return false;
 }
 
-bool PublisherBaseImpl::publishIpc(zmq::message_t &body){
+bool PublisherBaseImpl::publish(zmq::message_t &body){
     AssertLog(msg_type_ == msg::MsgType_Message, "");
     zmq::message_t header(topic_header_.data(), topic_header_.size());
-    return publishIpc(header, body);
+    return publish(header, body);
 }
 
-bool PublisherBaseImpl::publishReqIpc(unsigned int id, zmq::message_t &body, const char* protocol) {
+bool PublisherBaseImpl::publishReq(unsigned int id, zmq::message_t &body, const char* protocol) {
     AssertLog(msg_type_ == msg::MsgType_ServiceRequest, "");
     AssertLog(!cli_id_.empty(), "");
     auto* header_builder = new flatbuffers::FlatBufferBuilder();
@@ -124,10 +124,10 @@ bool PublisherBaseImpl::publishReqIpc(unsigned int id, zmq::message_t &body, con
             delete (flatbuffers::FlatBufferBuilder*)builder;
         }, header_builder);
 
-    return publishIpc(msg_header_, body);
+    return publish(msg_header_, body);
 }
 
-bool PublisherBaseImpl::publishRepIpc(unsigned int id, char status, zmq::message_t &body, const char* protocol) {
+bool PublisherBaseImpl::publishRep(unsigned int id, char status, zmq::message_t &body, const char* protocol) {
     AssertLog(msg_type_ == msg::MsgType_ServiceResponse, "");
     auto* header_builder = new flatbuffers::FlatBufferBuilder();
     auto rep_info_fb = msg::CreateRepInfo(*header_builder, status, id);
@@ -141,15 +141,15 @@ bool PublisherBaseImpl::publishRepIpc(unsigned int id, char status, zmq::message
                                    delete (flatbuffers::FlatBufferBuilder*)builder;
                                }, header_builder);
 
-    return publishIpc(msg_header_, body);
+    return publish(msg_header_, body);
 }
 
-bool PublisherBaseImpl::scheduleItc(const shared_ptr<const void> &msg) {
-    return ItcManager::GlobalManager()->scheduleItc(topic_, msg);
+bool PublisherBaseImpl::scheduleIntraProc(const shared_ptr<const void> &msg) {
+    return InatraProcManager::GlobalManager()->scheduleMessage(topic_, msg);
 }
 
-bool PublisherBaseImpl::connectedItc() {
-    return ItcManager::GlobalManager()->haveSub(topic_);
+bool PublisherBaseImpl::connectedIntraProc() {
+    return InatraProcManager::GlobalManager()->haveSub(topic_);
 }
 
 int PublisherBaseImpl::send(zmq::socket_t &socket, zmq::message_t &message, bool wait) {
@@ -168,8 +168,8 @@ int PublisherBaseImpl::send(zmq::socket_t &socket, zmq::message_t &message, bool
     return 0;
 
     err:
-    log.e(__FUNCTION__, "failed to publishIpc");
-    // AssertLog(false, "failed to publishIpc");
+    log.e(__FUNCTION__, "failed to publish");
+    // AssertLog(false, "failed to publish intra-proc");
     return -1;
 }
 
