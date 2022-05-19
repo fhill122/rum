@@ -7,6 +7,7 @@
 #ifndef RUM_SERIALIZATION_NATIVE_COMMON_TYPES_H_
 #define RUM_SERIALIZATION_NATIVE_COMMON_TYPES_H_
 
+#include <memory>
 #include "handwritten.h"
 
 namespace rum{
@@ -90,9 +91,18 @@ void Deserialize(const char* buffer, std::vector<T> &obj){
     buffer += AutoGetSerializationSize(size);
 
     obj.resize(size);
-    for (auto &o : obj){
-        AutoDeserialize(buffer, o);
-        buffer += AutoGetSerializationSize(o);
+    if constexpr(std::is_same<bool,T>::value){
+        for (size_t i = 0; i < obj.size(); ++i) {
+            bool b;
+            AutoDeserialize(buffer, b);
+            buffer += AutoGetSerializationSize(b);
+            obj[i] = b;
+        }
+    } else {
+        for (T &o : obj){
+            AutoDeserialize(buffer, o);
+            buffer += AutoGetSerializationSize(o);
+        }
     }
 }
 

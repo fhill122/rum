@@ -18,16 +18,19 @@ struct DependentFalse { static constexpr bool value = false; };
 template<typename T>
 size_t GetSerializationSize(const T &t) {
     static_assert(DependentFalse<T>::value, "No rules to get serialization size");
+    return 0;
 }
 
 template<typename T>
 bool Serialize(char *buffer, const T &t) {
     static_assert(DependentFalse<T>::value, "No rules to serialize");
+    return false;
 }
 
 template<typename T>
 bool Deserialize(const char *buffer, T &t) {
     static_assert(DependentFalse<T>::value, "No rules to deserialize");
+    return false;
 }
 
 // note ivan. would it be better that swap the order of 2nd and 3rd options?
