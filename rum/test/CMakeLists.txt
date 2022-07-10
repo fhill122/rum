@@ -39,6 +39,10 @@ add_executable(ser_fb_test
     serialization/ser_fb_test.cc)
 target_link_libraries(ser_fb_test gtest rumcore)
 
+add_executable(ser_io_test
+    serialization/ser_io_test.cc)
+target_link_libraries(ser_io_test gtest rumcore)
+
 # cpprum
 
 add_executable(cpprum_topic_test

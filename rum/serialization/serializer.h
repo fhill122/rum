@@ -6,8 +6,10 @@
 #define RUM_SERIALIZATION_SERIALIZER_H_
 
 #include <memory>
+#include <fstream>
 
 #include "rum/common/message.h"
+#include "rum/common/log.h"
 
 namespace rum {
 
@@ -40,6 +42,8 @@ template<typename S>
 class Serializer {
 
   public:
+
+    // todo ivan. maybe multiple forms of serialization and deserialization
 
     /**
      * Serialization function
@@ -98,6 +102,65 @@ class Serializer {
     static std::string Protocol(){
         return S::Protocol();
     }
+
+    /* io related */
+
+    template<typename T>
+    bool importFromFile(const std::string &path, T& t) const {
+        using namespace std;
+        ifstream file(path, ios::in | ios::binary);
+        if (!file) {
+            log.e(__func__, "file operation failed");
+            return false;
+        }
+
+        file.seekg(0, ios::end);
+        shared_ptr<Message> message = make_shared<Message>(file.tellg());
+        file.seekg(0, ios::beg);
+        file.read((char*)message->data(), message->size());
+        if (!file){
+            log.e(__func__, "file operation failed");
+            return false;
+        }
+
+        shared_ptr<const Message> message_const = move(message);
+        shared_ptr<const void> obj_void = deserialize<T>(message_const, Protocol());
+        if (!obj_void){
+            log.e(__func__, "failed to deserialize");
+            return false;
+        }
+        shared_ptr<const T> obj = interProcTypeConvert<T>(obj_void);
+        static_assert(is_copy_assignable<T>::value);
+        t = *obj;
+        return true;
+    }
+
+    template<typename T>
+    std::unique_ptr<T> importFromFile(const std::string &path) const {
+        // todo ivan. implement this and add multiple input forms of serialization and deserialization
+    }
+
+    template<typename T>
+    bool exportToFile(const std::string &path, const T& t) const {
+        using namespace std;
+        ofstream file(path, ios::out | ios::binary);
+        if (!file){
+            log.e(__func__, "file operation failed");
+            return false;
+        }
+
+        static_assert(is_copy_constructible<T>::value);
+        shared_ptr<T> obj = make_shared<T>(t);
+        unique_ptr<Message> message = serialize<T>(obj);
+        if (!message){
+            log.e(__func__, "failed to serialize");
+            return false;
+        }
+
+        file.write((char*)message->data(), message->size());
+        return true;
+    }
+
 };
 
 template<typename ReqT, typename RepT, class ReqSerializerT, class RepSerializerT>

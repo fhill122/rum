@@ -7,6 +7,9 @@
 #define IVTB_TOOLS_STOPWATCH_H_
 
 #include <chrono>
+#include <cstdio>
+#include <iostream>
+#include <cfloat>
 
 namespace ivtb{
 
@@ -16,6 +19,29 @@ class StopwatchAny{
   public:
     using Timestamp = typename ClockType::time_point;
     using Duration = typename ClockType::duration;
+
+    inline static double GetEpochOffset(){
+        if constexpr(std::is_same<std::chrono::system_clock,ClockType>::value) return 0;
+
+        double t_diff_abs_min = DBL_MAX;
+        double t_diff_final;
+        // try to find minimum time offset
+        for (int i = 0; i < 100; ++i) {
+            double t_diff =
+                    std::chrono::duration_cast<std::chrono::duration<double>>(ClockType::now().time_since_epoch() ).count()
+                    - std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::system_clock::now().time_since_epoch() ).count();
+            if(abs(t_diff)<t_diff_abs_min){
+                t_diff_abs_min = abs(t_diff);
+                t_diff_final = t_diff;
+                // printf("updated offset with %f on trial %d \n", t_diff_final, i);
+            }
+        }
+        if (t_diff_abs_min<1e-3) t_diff_final = 0;
+        // printf("offset of %f seconds\n", t_diff_final);
+        return -t_diff_final;
+    }
+
+    inline static const double kEpochOffset = GetEpochOffset();
 
   private:
     Timestamp start_t;
@@ -69,10 +95,26 @@ class StopwatchAny{
         }
     }
 
+    /**
+     * Get current time since epoch in seconds
+     * @return seconds
+     */
+    static inline double Now(){
+        return std::chrono::duration_cast<std::chrono::duration<double>>(
+                ClockType::now().time_since_epoch() ).count()  + kEpochOffset;
+    }
+
 };
 
+
+// default clock type, high resolution
 using Stopwatch = ivtb::StopwatchAny<>;
+
+// monotonic timer
 using StopwatchMono = ivtb::StopwatchAny<std::chrono::steady_clock>;
+
+// system clock
+using StopwatchSystem = ivtb::StopwatchAny<std::chrono::system_clock>;
 
 }
 

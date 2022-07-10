@@ -9,7 +9,6 @@
 
 namespace rum{
     // write additional template custom type serialization here
-    // what if it depends on common_types.h ?
 }
 
 #include <rum/serialization/native/serializer_native.h>

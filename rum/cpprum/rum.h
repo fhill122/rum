@@ -50,8 +50,8 @@ Subscriber::UniquePtr CreateSubscriber(
         const std::string &topic, const SubFunc<MsgT> &callback_f,
         size_t queue_size, const std::shared_ptr<ThreadPool> &tp) {
 
-
-    Serializer<SubSerializerT> serializer;
+    SubSerializerT serializer;
+    static_assert(std::is_base_of<Serializer<SubSerializerT>, SubSerializerT>::value);
 
     return std::make_unique<Subscriber>(
         NodeBase::GlobalNode(true)->addSubscriber(
@@ -66,24 +66,29 @@ Subscriber::UniquePtr CreateSubscriber(
                 return serializer.template deserialize<MsgT>(msg, protocol);
             },
             SubSerializerT::Protocol()
-        ));
+        )
+    );
 }
 
 template<class MsgT, class PubSerializerT>
 std::unique_ptr<Publisher<MsgT>> CreatePublisher(const std::string &topic) {
-    Serializer<PubSerializerT> serializer;
+    PubSerializerT serializer;
+    static_assert(std::is_base_of<Serializer<PubSerializerT>, PubSerializerT>::value);
 
     return std::make_unique<Publisher<MsgT>>(
             NodeBase::GlobalNode(true)->addPublisher(topic, PubSerializerT::Protocol()),
             [serializer = std::move(serializer)](const std::shared_ptr<const MsgT>&obj) mutable {
-                return serializer.template serialize<MsgT>(obj);} );
+                return serializer.template serialize<MsgT>(obj);}
+    );
 }
 
 template<class ReqT, class RepT, class ReqSerializerT, class RepSerializerT>
 std::unique_ptr<Client<ReqT, RepT>> CreateClient(const std::string &srv_name) {
     using namespace std;
-    Serializer<ReqSerializerT> req_serializer;
-    Serializer<RepSerializerT> rep_serializer;
+    ReqSerializerT req_serializer;
+    RepSerializerT rep_serializer;
+    static_assert(std::is_base_of<Serializer<ReqSerializerT>, ReqSerializerT>::value);
+    static_assert(std::is_base_of<Serializer<RepSerializerT>, RepSerializerT>::value);
 
     return std::make_unique<Client<ReqT,RepT>>(
             NodeBase::GlobalNode(true)->addClient(srv_name, req_serializer.Protocol()),
@@ -107,8 +112,10 @@ std::unique_ptr<Server> CreateServer(const std::string &srv_name,
                                      size_t queue_size,
                                      const std::shared_ptr<ThreadPool> &tp) {
     using namespace std;
-    Serializer<ReqSerializerT> req_serializer;
-    Serializer<RepSerializerT> rep_serializer;
+    ReqSerializerT req_serializer;
+    RepSerializerT rep_serializer;
+    static_assert(std::is_base_of<Serializer<ReqSerializerT>, ReqSerializerT>::value);
+    static_assert(std::is_base_of<Serializer<RepSerializerT>, RepSerializerT>::value);
 
     return std::make_unique<Server>(
         NodeBase::GlobalNode(true)->addServer(
@@ -125,7 +132,8 @@ std::unique_ptr<Server> CreateServer(const std::string &srv_name,
                 return SrvIntraProcCallback(req_serializer, callback_f, request, response);},
             ReqSerializerT::Protocol(),
             RepSerializerT::Protocol()
-        ));
+        )
+    );
 }
 
 }
