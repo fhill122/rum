@@ -13,7 +13,7 @@ namespace rum{
 
 #include <rum/cpprum/serialization/native/serializer_native.h>
 
-#include "../test_msg/test_native_message.h"
+#include "../test_msg/native/test_native_message.h"
 
 using namespace std;
 using namespace rum;

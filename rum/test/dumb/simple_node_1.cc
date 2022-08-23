@@ -9,7 +9,7 @@
 #include "rum/cpprum/serialization/flatbuffers/serializer_fbs.h"
 #include "rum/cpprum/rum.h"
 #include "rum/common/log.h"
-#include "../test_msg/test_point_generated.h"
+#include "rum/test/test_msg/flatbuffers/test_point_generated.h"
 
 using namespace rum;
 using namespace std;

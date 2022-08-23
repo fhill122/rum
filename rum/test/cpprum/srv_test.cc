@@ -8,7 +8,7 @@
 #include <rum/common/common.h>
 #include <rum/extern/ivtb/stopwatch.h>
 #include <rum/cpprum/serialization/flatbuffers/serializer_fbs.h>
-#include "../test_msg/test_number_generated.h"
+#include "../test_msg/flatbuffers/test_number_generated.h"
 #include "../test_utils/process_utils.h"
 #include "srv_test_common.h"
 

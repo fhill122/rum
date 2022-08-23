@@ -5,7 +5,7 @@
 #ifndef RUM_TEST_TEST_MSG_TEST_NATIVE_MESSAGE_H_
 #define RUM_TEST_TEST_MSG_TEST_NATIVE_MESSAGE_H_
 
-#include <rum/cpprum/serialization/native/common_types.h>
+#include "rum/cpprum/serialization/native/common_types.h"
 
 namespace rum{
 

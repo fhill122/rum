@@ -7,10 +7,13 @@
 
 #include "rum/cpprum/serialization/serializer.h"
 
+namespace rum{
+
 class SerializerProto : public Serializer<SerializerProto>{
   public:
     template<class T>
-    void serialize(const T& t, char **data_out, size_t &size_out) {
+    std::unique_ptr<Message>
+    serialize(const std::shared_ptr<const T> &object) const{
         // todo ivan.
         size_out = 1;
         *data_out = new char[size_out];
@@ -18,7 +21,7 @@ class SerializerProto : public Serializer<SerializerProto>{
     }
 
     template<typename T>
-    std::unique_ptr<T> deserialize(const char* data, size_t size,
+    std::unique_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
                                    const std::string &protocol=""){
         // todo ivan.
     }
@@ -29,4 +32,5 @@ class SerializerProto : public Serializer<SerializerProto>{
 
 };
 
+}
 #endif //RUM_SERIALIZATION_PROTOBUF_SERIALIZERPROTO_H_

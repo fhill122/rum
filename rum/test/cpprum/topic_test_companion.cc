@@ -4,11 +4,11 @@
 #include <rum/common/log.h>
 #include <rum/common/common.h>
 #include <rum/cpprum/rum.h>
-#include "../test_msg/test_image_generated.h"
+#include "../test_msg/flatbuffers/test_image_generated.h"
 
 #include <rum/cpprum/serialization/native/common_types.h>
 #include <rum/cpprum/serialization/native/serializer_native.h>
-#include "../test_msg/test_native_message.h"
+#include "../test_msg/native/test_native_message.h"
 
 
 using namespace std;

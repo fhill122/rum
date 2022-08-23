@@ -19,8 +19,6 @@ const string kIpStr = GetRumIp();
 const pid_t kPid = getpid();
 
 string GetRumIp() {
-    setbuf(stdout, NULL);
-
     if (const char *env_ip = std::getenv(kIpEnv)) {
         printer.i("rum", "Ip from $%s: %s", kIpEnv, env_ip);
         return env_ip;
