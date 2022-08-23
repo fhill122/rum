@@ -10,6 +10,9 @@ working in progress
 # check which process occupies master port
 sudo lsof -i :10086
 ```
+```c++
+setbuf(stdout, NULL);
+```
 
 ## Advantages over ros
 Major:
@@ -26,7 +29,6 @@ Misc:
 Why so harsh on ros? Coz I'm mean...
 
 ## todo
-- serialization should be in cpprum?
 - moodycamel queue with token
 - try udp discovery:
   https://zguide.zeromq.org/docs/chapter8/#Cooperative-Discovery-Using-UDP-Broadcasts

@@ -6,7 +6,6 @@
 #define RUM_RUM_SUBSCRIBER_H_
 
 #include "rum/core/subscriber_base_handler.h"
-#include "rum/serialization/serializer.h"
 
 namespace rum {
 

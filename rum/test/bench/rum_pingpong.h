@@ -6,7 +6,7 @@
 #define RUM_TEST_BENCH_RUM_PINGPONG_H_
 
 #define RUM_DEF_SERIALIZER SerializerNative
-#include <rum/serialization/native/serializer_native.h>
+#include <rum/cpprum/serialization/native/serializer_native.h>
 #include <rum/cpprum/rum.h>
 #include <rum/extern/ivtb/stopwatch.h>
 #include <geometry_msgs/Pose.h>

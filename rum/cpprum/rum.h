@@ -12,7 +12,7 @@
 #include "server.h"
 
 #ifndef RUM_DEF_SERIALIZER
-#include "rum/serialization/flatbuffers/serializer_fbs.h"
+#include "serialization/flatbuffers/serializer_fbs.h"
 #define RUM_DEF_SERIALIZER SerializerFbs
 #endif
 

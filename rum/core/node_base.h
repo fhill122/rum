@@ -9,7 +9,7 @@
 
 #include "rum/common/thread_pool.h"
 #include "rum/common/node_param.h"
-#include "rum/serialization/serializer.h"
+#include "rum/common/serialization.h"
 #include "subscriber_base_handler.h"
 #include "publisher_base_handler.h"
 #include "server_base_handler.h"

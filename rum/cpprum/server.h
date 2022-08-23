@@ -6,7 +6,6 @@
 #define RUM_CPPRUM_SERVER_H_
 
 #include "rum/core/server_base_handler.h"
-#include "rum/serialization/serializer.h"
 
 namespace rum{
 

@@ -10,8 +10,8 @@
 #include "rum/common/def.h"
 #include "rum/common/message.h"
 #include "rum/common/thread_pool.h"
+#include "rum/common/serialization.h"
 #include "rum/extern/zmq/zmq.hpp"
-#include "rum/serialization/serializer.h"
 #include "../msg/rum_header_generated.h"
 #include "srv_common.h"
 

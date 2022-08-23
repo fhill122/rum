@@ -5,7 +5,6 @@
 #ifndef RUM_COMMON_NODE_PARAM_H_
 #define RUM_COMMON_NODE_PARAM_H_
 
-#include "rum/serialization/flatbuffers/serializer_fbs.h"
 
 namespace rum{
 

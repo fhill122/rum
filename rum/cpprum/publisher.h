@@ -5,10 +5,10 @@
 #ifndef RUM_RUM_PUBLISHER_H_
 #define RUM_RUM_PUBLISHER_H_
 
-#include <rum/core/publisher_base_handler.h>
-#include <rum/core/node_base.h>
-#include <rum/serialization/serializer.h>
-#include <rum/common/log.h>
+#include "rum/core/publisher_base_handler.h"
+#include "rum/core/node_base.h"
+#include "rum/common/log.h"
+#include "rum/common/serialization.h"
 #include <memory>
 #include <string>
 

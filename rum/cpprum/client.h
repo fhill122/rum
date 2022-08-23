@@ -6,9 +6,9 @@
 #define RUM_CPPRUM_CLIENT_H_
 
 #include <future>
-#include <rum/core/client_base_handler.h>
-#include <rum/core/node_base.h>
-#include <rum/serialization/serializer.h>
+#include "rum/core/client_base_handler.h"
+#include "rum/core/node_base.h"
+#include "rum/common/serialization.h"
 
 namespace rum{
 

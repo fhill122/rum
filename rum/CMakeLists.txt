@@ -26,10 +26,6 @@ add_library(rumcore SHARED
     core/node_base.cc
 
     extern/zmq/zmq.hpp
-
-    # remove later, for syntax highlight only
-    serialization/flatbuffers/serializer_fbs.h
-    serialization/protobuf/serializer_proto.h
 )
 target_link_libraries(rumcore zmq Threads::Threads)
 # Release or RelWithDebInfo
@@ -43,6 +39,10 @@ add_library(cpprum SHARED
     cpprum/publisher.h
     cpprum/server.h
     cpprum/client.h
+
+    # remove later, for syntax highlight only
+    cpprum/serialization/flatbuffers/serializer_fbs.h
+    cpprum/serialization/protobuf/serializer_proto.h
 )
 set_target_properties(cpprum PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(cpprum rumcore)

@@ -5,8 +5,8 @@
 #ifndef RUM_SERIALIZATION_NATIVE_SERIALIZER_NATIVE_H_
 #define RUM_SERIALIZATION_NATIVE_SERIALIZER_NATIVE_H_
 
-#include <rum/serialization/serializer.h>
-#include <rum/serialization/native/autoserialize.h>
+#include "rum/cpprum/serialization/serializer.h"
+#include "autoserialize.h"
 
 namespace rum{
 

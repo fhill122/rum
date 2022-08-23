@@ -5,7 +5,7 @@
 #ifndef RUM_SERIALIZATION_PROTOBUF_SERIALIZERPROTO_H_
 #define RUM_SERIALIZATION_PROTOBUF_SERIALIZERPROTO_H_
 
-#include <rum/serialization/serializer.h>
+#include "rum/cpprum/serialization/serializer.h"
 
 class SerializerProto : public Serializer<SerializerProto>{
   public:

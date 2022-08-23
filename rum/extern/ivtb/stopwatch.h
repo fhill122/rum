@@ -76,6 +76,10 @@ class StopwatchAny{
         start_t = ClockType::now();
     }
 
+    inline bool isPaused(){
+        return paused;
+    }
+
     inline double passedSeconds(){
         auto duration = passedTime();
         return std::chrono::duration_cast<std::chrono::duration<double>>(duration).count();

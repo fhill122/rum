@@ -6,9 +6,9 @@
 #define RUM_SERIALIZATION_FLATBUFFERS_SERIALIZER_FBS_H_
 
 // not necessary the rum included flatbuffers
-#include <flatbuffers/flatbuffers.h>
+#include "flatbuffers/flatbuffers.h"
 
-#include "rum/serialization/serializer.h"
+#include "rum/cpprum/serialization/serializer.h"
 #include "rum/common/log.h"
 
 namespace rum {

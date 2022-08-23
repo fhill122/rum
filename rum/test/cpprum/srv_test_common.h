@@ -1,7 +1,7 @@
 
 #include <rum/cpprum/rum.h>
 
-#include <rum/serialization/flatbuffers/serializer_fbs.h>
+#include <rum/cpprum/serialization/flatbuffers/serializer_fbs.h>
 #include "../test_msg/test_number_generated.h"
 
 namespace rum {

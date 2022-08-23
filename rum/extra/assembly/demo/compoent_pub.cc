@@ -4,7 +4,7 @@
 
 #include <rum/extra/assembly/component.h>
 #include <rum/cpprum/rum.h>
-#include <rum/serialization/native/serializer_native.h>
+#include <rum/cpprum/serialization/native/serializer_native.h>
 #include "message.h"
 
 using namespace std;

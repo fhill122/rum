@@ -4,14 +4,14 @@
 #include <gtest/gtest.h>
 #include <rum/common/log.h>
 
-#include <rum/serialization/native/handwritten.h>
-#include <rum/serialization/native/common_types.h>
+#include <rum/cpprum/serialization/native/handwritten.h>
+#include <rum/cpprum/serialization/native/common_types.h>
 
 namespace rum{
     // write additional template custom type serialization here
 }
 
-#include <rum/serialization/native/serializer_native.h>
+#include <rum/cpprum/serialization/native/serializer_native.h>
 
 #include "../test_msg/test_native_message.h"
 

@@ -6,8 +6,8 @@
 #include <rum/cpprum/rum.h>
 #include "../test_msg/test_image_generated.h"
 
-#include <rum/serialization/native/common_types.h>
-#include <rum/serialization/native/serializer_native.h>
+#include <rum/cpprum/serialization/native/common_types.h>
+#include <rum/cpprum/serialization/native/serializer_native.h>
 #include "../test_msg/test_native_message.h"
 
 
