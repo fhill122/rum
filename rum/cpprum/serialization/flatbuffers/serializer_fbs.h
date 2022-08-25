@@ -28,6 +28,7 @@ class SerializerFbs : public Serializer<SerializerFbs> {
     template<class T =  FbsBuilder>
     std::unique_ptr<Message>
     serialize(const std::shared_ptr<const FbsBuilder> &builder) const {
+        static_assert(std::is_same<T,FbsBuilder>::value, "Publish type is FlatBufferBuilder");
         // to achieve zero-copy, we extend the life of builder beyond this function
         auto *builder_cpy = new std::shared_ptr<const FbsBuilder>(builder);
         return std::make_unique<Message>((*builder_cpy)->GetBufferPointer(),
@@ -37,6 +38,7 @@ class SerializerFbs : public Serializer<SerializerFbs> {
     template<typename T = Message>
     std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
                                    const std::string &msg_protocol) const {
+        static_assert(std::is_same<T,Message>::value, "Subscribe type is Message");
         if (msg_protocol!=Protocol()) return nullptr;
         return msg_in;
     }

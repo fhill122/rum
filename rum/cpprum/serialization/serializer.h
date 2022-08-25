@@ -104,6 +104,7 @@ class Serializer {
             return false;
         }
         shared_ptr<const T> obj = interProcTypeConvert<T>(obj_void);
+        // todo ivan. eliminate copy
         static_assert(is_copy_assignable<T>::value);
         t = *obj;
         return true;
@@ -123,6 +124,7 @@ class Serializer {
             return false;
         }
 
+        // todo ivan. eliminate copy
         static_assert(is_copy_constructible<T>::value);
         shared_ptr<T> obj = make_shared<T>(t);
         unique_ptr<Message> message = serialize<T>(obj);

@@ -35,13 +35,18 @@ add_executable(ser_native_test
     serialization/ser_native_test.cc)
 target_link_libraries(ser_native_test gtest rumcore)
 
-add_executable(ser_fb_test
-    serialization/ser_fb_test.cc)
-target_link_libraries(ser_fb_test gtest rumcore)
-
 add_executable(ser_io_test
     serialization/ser_io_test.cc)
 target_link_libraries(ser_io_test gtest rumcore)
+
+find_package(Protobuf QUIET)
+if (${Protobuf_FOUND})
+    message(STATUS "Found protobuf ${Protobuf_VERSION}" )
+    add_executable(ser_protobuf_test
+        serialization/ser_protobuf_test.cc test_msg/protobuf/test_number.pb.cc)
+    target_include_directories(ser_protobuf_test PUBLIC ${Protobuf_INCLUDE_DIRS})
+    target_link_libraries(ser_protobuf_test gtest rumcore ${Protobuf_LIBRARIES})
+endif()
 
 # cpprum
 

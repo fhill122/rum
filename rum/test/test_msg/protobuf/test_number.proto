@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package rum.test.proto;
+
+message Number {
+  int32 n1 = 1;
+  int32 n2 = 2;
+
+  uint64 l1 = 3;
+  uint64 l2 = 4;
+
+  double d1 = 5;
+  double d2 = 6;
+}
