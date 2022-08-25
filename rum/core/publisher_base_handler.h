@@ -26,6 +26,14 @@ class PublisherBaseHandler {
   public:
     inline virtual ~PublisherBaseHandler() = default;
 
+    /**
+     * @return Whether has any subscriber (inter or intra process) connected to it
+     */
+    bool hasSubscribers() const;
+
+    /**
+     * @return whether is remotely (inter proc) connected with any subscriber
+     */
     bool isConnected() const;
 
     const std::string & getTopic() const;

@@ -10,6 +10,9 @@ namespace rum {
 
 PublisherBaseHandler::PublisherBaseHandler(PublisherBaseImpl* pimpl): pimpl_(pimpl){}
 
+bool PublisherBaseHandler::hasSubscribers() const{
+    return pimpl_->connectedIntraProc() || isConnected();
+}
 
 bool PublisherBaseHandler::isConnected() const{
     return pimpl_->isConnected();

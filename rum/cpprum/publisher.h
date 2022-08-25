@@ -52,8 +52,6 @@ class Publisher : public PublisherBaseHandler{
         NodeBase::GlobalNode()->removePublisher(*this);
     }
 
-    bool hasSubscribers();
-
     // taking ownership, no copy
     void pub(std::unique_ptr<MsgT> msg){
         internalPub(move(msg));
