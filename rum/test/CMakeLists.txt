@@ -42,16 +42,18 @@ target_link_libraries(ser_io_test gtest rumcore)
 find_package(Protobuf QUIET)
 if (${Protobuf_FOUND})
     message(STATUS "Found protobuf ${Protobuf_VERSION}" )
+    execute_process(
+        COMMAND bash build.sh
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test_msg/protobuf
+    )
 
     add_executable(ser_protobuf_test
         serialization/ser_protobuf_test.cc test_msg/protobuf/test_number.pb.cc)
-    target_include_directories(ser_protobuf_test PUBLIC ${Protobuf_INCLUDE_DIRS})
-    target_link_libraries(ser_protobuf_test gtest cpprum ${Protobuf_LIBRARIES})
+    target_link_libraries(ser_protobuf_test gtest cpprum protobuf::libprotobuf)
 
     add_executable(ser_protobuf_test_companion
         serialization/ser_protobuf_test_companion.cc test_msg/protobuf/test_number.pb.cc)
-    target_include_directories(ser_protobuf_test_companion PUBLIC ${Protobuf_INCLUDE_DIRS})
-    target_link_libraries(ser_protobuf_test_companion gtest cpprum ${Protobuf_LIBRARIES})
+    target_link_libraries(ser_protobuf_test_companion gtest cpprum protobuf::libprotobuf)
 endif()
 
 # cpprum

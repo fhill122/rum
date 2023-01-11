@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 #include <rum/common/log.h>
 
-#include <rum/cpprum/serialization/native/handwritten.h>
 #include <rum/cpprum/serialization/native/common_types.h>
 
 namespace rum{

@@ -70,7 +70,7 @@ Master::Master(std::shared_ptr<zmq::context_t> context) :
             success:
             active.store(true, memory_order_release);
             sub_container_->start();
-            log.i(TAG, "Won master election!");
+            log.d(TAG, "Won master election!");
             return;
         }
     });
