@@ -78,3 +78,4 @@ endif()
 
 add_subdirectory(dumb)
 add_subdirectory(bench)
+add_subdirectory(serialization/native_extend)

@@ -33,3 +33,4 @@ Why so harsh on ros? Coz I'm mean...
 - try udp discovery:
   https://zguide.zeromq.org/docs/chapter8/#Cooperative-Discovery-Using-UDP-Broadcasts
   https://github.com/computersarecool/cpp_sockets
+- install & conda recipe
