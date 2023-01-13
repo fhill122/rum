@@ -27,8 +27,7 @@ TEST(CvSerialization, MatTest){
         }
     }
     shared_ptr<const Message> data = serializer.serialize((shared_ptr<const cv::Mat>)mat_sp);
-    shared_ptr<const void> mat_deser_void = serializer.deserialize<cv::Mat>(data, serializer.Protocol());
-    shared_ptr<const cv::Mat> mat_deser = serializer.interProcTypeConvert<cv::Mat>(mat_deser_void);
+    unique_ptr<cv::Mat> mat_deser = serializer.deserialize<cv::Mat>(data, serializer.Protocol());
     ASSERT_TRUE(IsEqual(*mat_sp, *mat_deser));
 
     mat_sp->at<uchar>(0,0) += 1;

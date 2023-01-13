@@ -40,7 +40,7 @@ class Serializer {
      * @return
      */
     template<typename T>
-    std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
+    std::unique_ptr<T> deserialize(std::shared_ptr<const Message> &msg_in,
                                    const std::string &protocol) const{
         return ((S*)this)-> template deserialize<T>(msg_in, protocol);
     }
@@ -57,17 +57,6 @@ class Serializer {
             return ((S *) this)->template intraProcTypeConvert<SubT>(msg);
     }
 
-    // convert from deserialized type to sub type. would ever override it?
-    template<typename SubT>
-    std::shared_ptr<const SubT> interProcTypeConvert(const std::shared_ptr<const void>& msg) const{
-        // check if this function is overridden
-        // todo ivan. linux gcc failed while mac clang passed
-        // if constexpr (&S::template interProcTypeConvert<SubT> == &Serializer<S>::interProcTypeConvert<SubT>)
-        if (&S::template interProcTypeConvert<SubT> == &Serializer<S>::interProcTypeConvert<SubT>)
-            return std::static_pointer_cast<const SubT>(msg);
-        else
-            return ((S *) this)->template interProcTypeConvert<SubT>(msg);
-    }
 
     /**
      * Get protocol. Name starts with "__" is reserved
@@ -80,12 +69,12 @@ class Serializer {
     /* io related */
 
     template<typename T>
-    bool importFromFile(const std::string &path, T& t) const {
+    std::unique_ptr<T> importFromFile(const std::string &path) const {
         using namespace std;
         ifstream file(path, ios::in | ios::binary);
         if (!file) {
             log.e(__func__, "file operation failed");
-            return false;
+            return nullptr;
         }
 
         file.seekg(0, ios::end);
@@ -94,27 +83,29 @@ class Serializer {
         file.read((char*)message->data(), message->size());
         if (!file){
             log.e(__func__, "file operation failed");
-            return false;
+            return nullptr;
         }
 
         shared_ptr<const Message> message_const = move(message);
-        shared_ptr<const void> obj_void = deserialize<T>(message_const, Protocol());
-        if (!obj_void){
+        unique_ptr<T> obj = deserialize<T>(message_const, Protocol());
+        if (!obj){
             log.e(__func__, "failed to deserialize");
-            return false;
+            return nullptr;
         }
-        shared_ptr<const T> obj = interProcTypeConvert<T>(obj_void);
-        // todo ivan. eliminate copy
-        static_assert(is_copy_assignable<T>::value);
+        return obj;
+    }
+
+    template<typename T>
+    bool importFromFile(const std::string &path, T& t) const {
+        std::unique_ptr<T> obj = importFromFile<T>(path);
+        if (!obj) return false;
+        // possible to eliminate copy assign?
+        static_assert(std::is_copy_assignable<T>::value);
         t = *obj;
         return true;
     }
 
-    template<typename T>
-    std::unique_ptr<T> importFromFile(const std::string &path) const {
-        // todo ivan. implement this and add multiple input forms of serialization and deserialization
-    }
-
+    // TODO(ivan): taking input as shared_ptr as well
     template<typename T>
     bool exportToFile(const std::string &path, const T& t) const {
         using namespace std;
@@ -145,10 +136,10 @@ bool SrvInterProcCallback(const Serializer<ReqSerializerT> &req_serializer,
                           const SrvFunc<ReqT, RepT> &callback_f,
                           std::shared_ptr<const Message>& request, const std::string& req_protocol,
                           std::shared_ptr<Message>& response){
-    auto req_void = req_serializer.template deserialize<ReqT>(request, req_protocol);
+    std::shared_ptr<const ReqT> req_obj = req_serializer.template deserialize<ReqT>(request, req_protocol);
     // we require RepT default constructor exist
     auto rep_obj = std::make_shared<RepT>();
-    bool ok = callback_f(req_serializer.template interProcTypeConvert<ReqT>(req_void), rep_obj);
+    bool ok = callback_f(req_obj, rep_obj);
     if(ok){
         response = rep_serializer.template serialize<RepT>(std::const_pointer_cast<const RepT>(rep_obj));
     }

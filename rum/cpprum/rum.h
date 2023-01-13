@@ -57,7 +57,7 @@ Subscriber::UniquePtr CreateSubscriber(
         NodeBase::GlobalNode(true)->addSubscriber(
             topic, tp, queue_size,
             [serializer, callback_f](const std::shared_ptr<const void>& msg) mutable {
-                callback_f(serializer.template interProcTypeConvert<MsgT>(msg));
+                callback_f(std::static_pointer_cast<const MsgT>(msg));
             },
             [serializer, callback_f](const std::shared_ptr<const void>& msg) mutable {
                 callback_f(serializer.template intraProcTypeConvert<MsgT>(msg));
@@ -97,8 +97,7 @@ std::unique_ptr<Client<ReqT, RepT>> CreateClient(const std::string &srv_name) {
             },
             [rep_serializer = move(rep_serializer)]
             (shared_ptr<const Message>&rep_msg, const string& protocol){
-                return rep_serializer.template interProcTypeConvert<RepT>(
-                        rep_serializer.template deserialize<RepT>(rep_msg, protocol));
+                return rep_serializer.template deserialize<RepT>(rep_msg, protocol);
             },
             [rep_serializer = move(rep_serializer)](const shared_ptr<const void>& rep_obj){
                 return rep_serializer.template intraProcTypeConvert<RepT>(rep_obj);

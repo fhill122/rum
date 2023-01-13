@@ -28,8 +28,7 @@ TEST(Native, TrivialDataTest){
 
     shared_ptr<const Message> msg = serializer.serialize(static_pointer_cast<const TrivialData>(obj));
 
-    auto obj2 = static_pointer_cast<const TrivialData>(
-            serializer.deserialize<TrivialData>(msg, serializer.Protocol()) );
+    auto obj2 = serializer.deserialize<TrivialData>(msg, serializer.Protocol());
 
     ASSERT_EQ(*obj, *obj2);
 }
@@ -44,8 +43,7 @@ TEST(Native, AutoDerivedTest){
 
     shared_ptr<const Message> msg = serializer.serialize(static_pointer_cast<const AutoDerived>(obj));
 
-    auto obj2 = static_pointer_cast<const AutoDerived>(
-            serializer.deserialize<AutoDerived>(msg, serializer.Protocol()) );
+    auto obj2 = serializer.deserialize<AutoDerived>(msg, serializer.Protocol());
 
     ASSERT_EQ(*obj, *obj2);
 }
@@ -62,8 +60,7 @@ TEST(Native, PredefindedTest){
 
     shared_ptr<const Message> msg = serializer.serialize(static_pointer_cast<const Predefinded>(obj));
 
-    auto obj2 = static_pointer_cast<const Predefinded>(
-            serializer.deserialize<Predefinded>(msg, serializer.Protocol()) );
+    auto obj2 = serializer.deserialize<Predefinded>(msg, serializer.Protocol());
 
     ASSERT_EQ(*obj, *obj2);
 }
@@ -76,8 +73,7 @@ TEST(Native, CustomDefined){
 
     shared_ptr<const Message> msg = serializer.serialize(static_pointer_cast<const CustomDefined>(obj));
 
-    auto obj2 = static_pointer_cast<const CustomDefined>(
-            serializer.deserialize<CustomDefined>(msg, serializer.Protocol()) );
+    auto obj2 = serializer.deserialize<CustomDefined>(msg, serializer.Protocol());
 
     ASSERT_EQ(*obj, *obj2);
 }

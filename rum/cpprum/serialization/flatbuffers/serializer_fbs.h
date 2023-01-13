@@ -16,10 +16,10 @@ namespace rum {
 using FbsBuilder = flatbuffers::FlatBufferBuilder;
 
 class SerializerFbs : public Serializer<SerializerFbs> {
-
+    template<class T>
     static void DestroyData(void *data, void *builder_p){
         // decrease shared_ptr count
-        delete (std::shared_ptr<const FbsBuilder>*)builder_p;
+        delete (std::shared_ptr<const T>*)builder_p;
     }
 
   public:
@@ -32,15 +32,19 @@ class SerializerFbs : public Serializer<SerializerFbs> {
         // to achieve zero-copy, we extend the life of builder beyond this function
         auto *builder_cpy = new std::shared_ptr<const FbsBuilder>(builder);
         return std::make_unique<Message>((*builder_cpy)->GetBufferPointer(),
-            (*builder_cpy)->GetSize(), &SerializerFbs::DestroyData, builder_cpy);
+            (*builder_cpy)->GetSize(), &SerializerFbs::DestroyData<FbsBuilder>, builder_cpy);
     }
 
     template<typename T = Message>
-    std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
+    std::unique_ptr<T> deserialize(std::shared_ptr<const Message> &msg_in,
                                    const std::string &msg_protocol) const {
         static_assert(std::is_same<T,Message>::value, "Subscribe type is Message");
         if (msg_protocol!=Protocol()) return nullptr;
-        return msg_in;
+        // create a unique_ptr of the same msg_in data and prolong msg_in life
+        auto *msg_in_cpy = new std::shared_ptr<const Message>(msg_in);
+        return std::make_unique<Message>(
+                const_cast<void*>(msg_in->data()),msg_in->size(),
+                &SerializerFbs::DestroyData<Message>, msg_in_cpy);
     }
 
     // always subscribe with Message, as this is the only way to copy flatbuffers objects
@@ -52,7 +56,7 @@ class SerializerFbs : public Serializer<SerializerFbs> {
         // create a message from builder data and prolong builder life
         return std::make_shared<Message>(
                 (*builder_cpy)->GetBufferPointer(), (*builder_cpy)->GetSize(),
-                &SerializerFbs::DestroyData, builder_cpy);
+                &SerializerFbs::DestroyData<FbsBuilder>, builder_cpy);
     }
 
     static std::string Protocol() {

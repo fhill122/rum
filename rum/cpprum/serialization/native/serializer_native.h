@@ -28,7 +28,7 @@ class SerializerNative : public Serializer<SerializerNative>{
     }
 
     template<typename T>
-    std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
+    std::unique_ptr<T> deserialize(std::shared_ptr<const Message> &msg_in,
                                    const std::string &msg_protocol="") const{
         if (msg_protocol!=Protocol()) return nullptr;
         // T must have default constructor

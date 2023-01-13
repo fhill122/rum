@@ -22,14 +22,14 @@ class SerializerProto : public Serializer<SerializerProto>{
     }
 
     template<typename T>
-    std::shared_ptr<const void> deserialize(std::shared_ptr<const Message> &msg_in,
+    std::unique_ptr<T> deserialize(std::shared_ptr<const Message> &msg_in,
                                    const std::string &protocol="") const{
         static_assert(std::is_base_of<google::protobuf::Message,T>::value, "must be a protobuf message type");
         if (protocol!=Protocol()) return nullptr;
 
-        auto obj = std::make_shared<T>();
+        auto obj = std::make_unique<T>();
         bool ok = obj->ParseFromArray(msg_in->data(), msg_in->size());
-        return ok? obj : nullptr;
+        return ok? std::move(obj) : nullptr;
     }
 
     inline static std::string Protocol(){
