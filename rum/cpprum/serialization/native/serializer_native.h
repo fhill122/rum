@@ -42,7 +42,7 @@ class SerializerNative : public Serializer<SerializerNative>{
     }
 
     template<typename T, typename... Args>
-    static bool SerializeToFile(const char *path, const T &t, const Args &... args) {
+    static bool SerializeToFile(const std::string &path, const T &t, const Args &... args) {
         using namespace std;
         ofstream file(path, ios::out | ios::binary);
         if (!file){
@@ -59,7 +59,7 @@ class SerializerNative : public Serializer<SerializerNative>{
     }
 
     template<typename T, typename... Args>
-    static bool DeserializeFromFile(const char *path, T &t, Args &... args) {
+    static bool DeserializeFromFile(const std::string &path, T &t, Args &... args) {
         using namespace std;
         ifstream file(path, ios::in | ios::binary);
         if (!file) {
