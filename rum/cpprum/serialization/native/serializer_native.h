@@ -51,10 +51,10 @@ class SerializerNative : public Serializer<SerializerNative>{
         }
 
         size_t size = AutoGetSerializationSize(t, args...);
-        auto msg = std::make_unique<Message>(size);
-        AutoSerialize((char*)msg->data(), t, args...);
+        vector<char> buffer(size);
+        AutoSerialize(buffer.data(), t, args...);
 
-        file.write((char*)msg->data(), msg->size());
+        file.write(buffer.data(), buffer.size());
         return true;
     }
 
@@ -68,15 +68,15 @@ class SerializerNative : public Serializer<SerializerNative>{
         }
 
         file.seekg(0, ios::end);
-        Message msg{(size_t)file.tellg()};
+        vector<char> buffer(file.tellg());
         file.seekg(0, ios::beg);
-        file.read((char*)msg.data(), msg.size());
+        file.read(buffer.data(), buffer.size());
         if (!file){
             log.e(__func__, "file failed to read: %s", path.c_str());
             return false;
         }
 
-        AutoDeserialize((char*)msg.data(), t, args...);
+        AutoDeserialize(buffer.data(), t, args...);
         return true;
     }
 };
