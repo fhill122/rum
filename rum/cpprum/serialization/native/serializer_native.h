@@ -46,7 +46,7 @@ class SerializerNative : public Serializer<SerializerNative>{
         using namespace std;
         ofstream file(path, ios::out | ios::binary);
         if (!file){
-            log.e(__func__, "file failed to open: %s", path);
+            log.e(__func__, "file failed to open: %s", path.c_str());
             return false;
         }
 
@@ -63,7 +63,7 @@ class SerializerNative : public Serializer<SerializerNative>{
         using namespace std;
         ifstream file(path, ios::in | ios::binary);
         if (!file) {
-            log.e(__func__, "file failed to open: %s", path);
+            log.e(__func__, "file failed to open: %s", path.c_str());
             return false;
         }
 
@@ -72,7 +72,7 @@ class SerializerNative : public Serializer<SerializerNative>{
         file.seekg(0, ios::beg);
         file.read((char*)msg.data(), msg.size());
         if (!file){
-            log.e(__func__, "file failed to read: %s", path);
+            log.e(__func__, "file failed to read: %s", path.c_str());
             return false;
         }
 
