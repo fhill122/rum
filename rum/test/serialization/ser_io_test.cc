@@ -33,6 +33,30 @@ TEST(NativeIO, SimpleIO){
     ASSERT_TRUE(obj==obj2);
 }
 
+TEST(NativeIO, MultiObjects){
+    constexpr char kPath[] = "MultiObj.data";
+
+    TrivialData obj;
+    obj.l = obj.b;
+    obj.x = 3; obj.y =4;
+    obj.data[0] = 6; obj.data[1] = 6; obj.data[2] = 6;
+
+    TrivialData obj2;
+    obj.x +=1;
+    obj.data[2] +=1;
+
+
+    bool export_ok = SerializerNative::SerializeToFile(kPath, obj, obj2);
+    ASSERT_TRUE(export_ok);
+
+    TrivialData obj3, obj4;
+    bool import_ok = SerializerNative::DeserializeFromFile(kPath, obj3, obj4);
+    ASSERT_TRUE(import_ok);
+
+    ASSERT_TRUE(obj==obj3);
+    ASSERT_TRUE(obj2==obj4);
+}
+
 int main(int argc, char **argv){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::v);
 

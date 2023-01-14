@@ -40,6 +40,45 @@ class SerializerNative : public Serializer<SerializerNative>{
     inline static std::string Protocol(){
         return "native";
     }
+
+    template<typename T, typename... Args>
+    static bool SerializeToFile(const char *path, const T &t, const Args &... args) {
+        using namespace std;
+        ofstream file(path, ios::out | ios::binary);
+        if (!file){
+            log.e(__func__, "file failed to open: %s", path);
+            return false;
+        }
+
+        size_t size = AutoGetSerializationSize(t, args...);
+        auto msg = std::make_unique<Message>(size);
+        AutoSerialize((char*)msg->data(), t, args...);
+
+        file.write((char*)msg->data(), msg->size());
+        return true;
+    }
+
+    template<typename T, typename... Args>
+    static bool DeserializeFromFile(const char *path, T &t, Args &... args) {
+        using namespace std;
+        ifstream file(path, ios::in | ios::binary);
+        if (!file) {
+            log.e(__func__, "file failed to open: %s", path);
+            return false;
+        }
+
+        file.seekg(0, ios::end);
+        Message msg{(size_t)file.tellg()};
+        file.seekg(0, ios::beg);
+        file.read((char*)msg.data(), msg.size());
+        if (!file){
+            log.e(__func__, "file failed to read: %s", path);
+            return false;
+        }
+
+        AutoDeserialize((char*)msg.data(), t, args...);
+        return true;
+    }
 };
 
 }
