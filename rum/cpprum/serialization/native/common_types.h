@@ -13,17 +13,17 @@
 namespace rum{
 
 // std::string. store as [string.size(), data]
-size_t GetSerializationSize(const std::string &str){
+inline size_t GetSerializationSize(const std::string &str){
     return sizeof(size_t) + str.size();
 }
 
-void Serialize(char* buffer, const std::string &str){
+inline void Serialize(char* buffer, const std::string &str){
     AutoSerialize(buffer, str.size());
     buffer += AutoGetSerializationSize(str.size());
     std::copy(str.data(), str.data()+str.size(), buffer);
 }
 
-void Deserialize(const char* buffer, std::string &str){
+inline void Deserialize(const char* buffer, std::string &str){
     size_t size;
     AutoDeserialize(buffer, size);
     buffer += AutoGetSerializationSize(size);
