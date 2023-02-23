@@ -32,15 +32,16 @@ struct AutoDerived : HandwrittenSerialization{
 };
 
 
-// example 3: contains either trivial data or types with predefined rules (provided in common_types.h)
+// example 3: common_types.h
 struct Predefinded : HandwrittenSerialization{
     std::string name;
     int id;
+    std::unique_ptr<TrivialData> trivial_data;
     std::array<double,3> xyz;
     std::vector<char> data;
-    std::unique_ptr<TrivialData> trivial_data;
+    std::map<int,int> map_data;
 
-    AUTO_SERIALIZE_MEMBERS(name, id, xyz, data, trivial_data)
+    AUTO_SERIALIZE_MEMBERS(name, id, trivial_data, xyz, data, map_data)
 };
 
 
@@ -82,7 +83,8 @@ inline bool operator==(const Predefinded& lhs, const Predefinded& rhs){
         res = *lhs.trivial_data == *rhs.trivial_data;
     }
 
-    return res && lhs.name == rhs.name && lhs.id == rhs.id && lhs.xyz == rhs.xyz && lhs.data==rhs.data;
+    return res && lhs.name == rhs.name && lhs.id == rhs.id && lhs.xyz == rhs.xyz &&
+            lhs.data==rhs.data && lhs.map_data==rhs.map_data;
 }
 
 inline bool operator==(const CustomDefined& lhs, const CustomDefined& rhs){

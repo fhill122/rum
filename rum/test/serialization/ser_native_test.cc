@@ -57,6 +57,8 @@ TEST(Native, PredefindedTest){
     obj->name = "yo";
     obj->data = {'a','b', 'c'};
     obj->xyz = {1.5, 6.66, 3.14159};
+    obj->map_data.emplace(1,2);
+    obj->map_data.emplace(0,-9);
 
     shared_ptr<const Message> msg = serializer.serialize(static_pointer_cast<const Predefinded>(obj));
 
