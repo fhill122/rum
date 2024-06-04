@@ -48,19 +48,12 @@ struct Predefinded : HandwrittenSerialization{
 // example 4: just like option 3, we define our own serialization rule
 struct CustomDefined{
     int x;
+    int y;
     std::mutex mu;
     CustomDefined(){ x=4;}
 };
 
-size_t GetSerializationSize(const CustomDefined &s) { return sizeof(s.x);}
-
-void Serialize(char* buffer, const CustomDefined &s){
-    *(int*)buffer = s.x;
-}
-
-void Deserialize(const char* buffer, CustomDefined &s){
-    s.x = *(int*)buffer;
-}
+AUTO_SERIALIZE_CLASS(CustomDefined, obj, obj.x, obj.y)
 
 // equal operator we use for this test
 inline bool operator==(const TrivialData& lhs, const TrivialData& rhs){
@@ -88,7 +81,7 @@ inline bool operator==(const Predefinded& lhs, const Predefinded& rhs){
 }
 
 inline bool operator==(const CustomDefined& lhs, const CustomDefined& rhs){
-    return lhs.x == rhs.x;
+    return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
 }

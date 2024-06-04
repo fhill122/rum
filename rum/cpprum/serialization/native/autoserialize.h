@@ -33,7 +33,6 @@ bool Deserialize(const char *buffer, T &t) {
     return false;
 }
 
-// note ivan. would it be better that swap the order of 2nd and 3rd options?
 template<typename T>
 size_t AutoGetSerializationSize(const T &t) {
     if constexpr(std::is_base_of<HandwrittenSerialization, T>::value) {
@@ -88,18 +87,32 @@ void AutoDeserialize(const char *buffer, T &t, Args &... args) {
 }
 
 #define AUTO_SERIALIZE_MEMBERS(...) \
-    [[nodiscard]] size_t getSerializationSize() const override { \
-        return rum::AutoGetSerializationSize(__VA_ARGS__);            \
-    }                                \
-                                     \
-    void serialize(char *_buffer_data__) const override {        \
-        rum::AutoSerialize(_buffer_data__, __VA_ARGS__);              \
-    }                               \
-                                    \
-    void deserialize(const char *_buffer_data__) override {      \
-        rum::AutoDeserialize(_buffer_data__, __VA_ARGS__);            \
-    }
-
-
+[[nodiscard]] size_t getSerializationSize() const override {      \
+    return rum::AutoGetSerializationSize(__VA_ARGS__);            \
+}                                                                 \
+                                                                  \
+void serialize(char *_buffer_data__) const override {             \
+    rum::AutoSerialize(_buffer_data__, __VA_ARGS__);              \
+}                                                                 \
+                                                                  \
+void deserialize(const char *_buffer_data__) override {           \
+    rum::AutoDeserialize(_buffer_data__, __VA_ARGS__);            \
 }
+
+
+#define AUTO_SERIALIZE_CLASS(ClassT, obj, ...)                    \
+[[nodiscard]] size_t GetSerializationSize(const ClassT & obj) {   \
+    return rum::AutoGetSerializationSize(__VA_ARGS__);            \
+}                                                                 \
+                                                                  \
+bool Serialize(char *buffer, const ClassT & obj) {                \
+    rum::AutoSerialize(buffer, __VA_ARGS__);                      \
+    return true;                                                  \
+}                                                                 \
+                                                                  \
+void Deserialize(const char *buffer, ClassT & obj) {              \
+    rum::AutoDeserialize(buffer, __VA_ARGS__);                    \
+}                                                                 \
+
+}  // namespace
 #endif //RUM_SERIALIZATION_NATIVE_AUTOSERIALIZE_H_

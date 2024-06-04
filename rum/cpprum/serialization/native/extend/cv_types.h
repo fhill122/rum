@@ -26,11 +26,11 @@ struct CvMatHeader{
     int type;
 };
 
-size_t GetSerializationSize(const cv::Mat &mat){
+inline size_t GetSerializationSize(const cv::Mat &mat){
     return sizeof(CvMatHeader) + mat.elemSize()*mat.cols*mat.rows;
 }
 
-void Serialize(char* buffer, const cv::Mat &mat){
+inline void Serialize(char* buffer, const cv::Mat &mat){
     CvMatHeader header{mat.rows, mat.cols, mat.type()};
     AutoSerialize(buffer, header);
     buffer += AutoGetSerializationSize(header);
@@ -49,7 +49,7 @@ void Serialize(char* buffer, const cv::Mat &mat){
     }
 }
 
-void Deserialize(const char* buffer, cv::Mat &mat){
+inline void Deserialize(const char* buffer, cv::Mat &mat){
     CvMatHeader header;
     AutoDeserialize(buffer, header);
     buffer += AutoGetSerializationSize(header);

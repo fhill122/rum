@@ -72,6 +72,7 @@ TEST(Native, CustomDefined){
 
     auto obj = make_shared<CustomDefined>();
     obj->x = 13;
+    obj->y = 17;
 
     shared_ptr<const Message> msg = serializer.serialize(static_pointer_cast<const CustomDefined>(obj));
 
@@ -79,6 +80,8 @@ TEST(Native, CustomDefined){
 
     ASSERT_EQ(*obj, *obj2);
 }
+
+#define INIT_VAR(type, x, y) type x = y
 
 int main(int argc, char **argv){
     rum::log.setLogLevel(Log::Destination::Std, Log::Level::v);
